@@ -8,6 +8,8 @@ cache:
     - ~/docker
 
 script:
+  - echo "$TRAVIS_BRANCH"
+  - echo "$TRAVIS_REPO_SLUG"
   - docker version
   - docker info
   - if [[ -e ~/docker/image.tar ]]; then docker load -i ~/docker/image.tar; fi
