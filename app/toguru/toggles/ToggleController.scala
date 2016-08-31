@@ -14,21 +14,33 @@ import toguru.logging.EventPublishing
 
 import scala.concurrent.{ExecutionContext, Future}
 
+object ToggleController {
+
+  implicit val createToggleReads = Json.reads[CreateToggleCommand]
+  implicit val createToggleWrites = Json.writes[CreateToggleCommand]
+
+  implicit val globalRolloutReads = Json.reads[CreateGlobalRolloutConditionCommand]
+  implicit val globalRolloutWrites = Json.writes[CreateGlobalRolloutConditionCommand]
+
+  implicit val toggleWrites = Json.writes[Toggle]
+  implicit val toggleReads  = Json.reads[Toggle]
+
+  val sampleCreateToggle = CreateToggleCommand("toggle name", "toggle description", Map("team" -> "Shared Services"))
+  val sampleCreateGlobalRollout = CreateGlobalRolloutConditionCommand(42)
+
+}
+
 class ToggleController(config: Config, provider: ToggleActorProvider) extends Controller with EventPublishing {
 
-  type ResponseMapper = PartialFunction[Any, Result]
+  import ToggleController._
+
+  implicit val timeout = Timeout(config.actorTimeout)
 
   type FailureHandler = PartialFunction[Throwable, Result]
 
   @Inject
   def this(system: ActorSystem, config: Config) = this(config, ToggleActor.provider(system))
 
-  implicit val createToggleReads = Json.reads[CreateToggleCommand]
-  implicit val createToggleWrites = Json.writes[CreateToggleCommand]
-  implicit val toggleWrites = Json.writes[Toggle]
-  implicit val timeout = Timeout(config.actorTimeout)
-
-  val sampleCreateToggle = CreateToggleCommand("toggle name", "toggle description", Map("team" -> "Shared Services"))
 
   def get(toggleId: String) = ActionWithJson.async { request =>
     import play.api.libs.concurrent.Execution.Implicits._
@@ -63,8 +75,8 @@ class ToggleController(config: Config, provider: ToggleActorProvider) extends Co
             s"A toggle with id $toggleId already exists",
             "Choose different toggle name"))
 
-        case CreateFailed(toggleId, cause) =>
-          publisher.event("create-toggle-failed", cause, "toggle-id" -> toggleId)
+        case PersistFailed(toggleId, cause) =>
+          publisher.event("create-toggle-failure", cause, "toggle-id" -> toggleId)
           InternalServerError(errorJson("Internal Server Error", cause.getMessage))
       }
     }
@@ -73,7 +85,7 @@ class ToggleController(config: Config, provider: ToggleActorProvider) extends Co
   def withActor(toggleId: String, actionId: String)(handler: ActorRef => Future[Result])(implicit ec: ExecutionContext): Future[Result] = {
     val toggleActor = provider.create(toggleId)
     handler(toggleActor)
-      .recover(serverError(s"$actionId-failed", toggleId))
+      .recover(serverError(s"$actionId-failure", toggleId))
       .andThen { case _ => provider.stop(toggleActor) }
   }
 
@@ -85,5 +97,29 @@ class ToggleController(config: Config, provider: ToggleActorProvider) extends Co
         "An internal error occurred",
         "Try again later or contact service owning team"
       ))
+  }
+
+  def createGlobalRollout(toggleId: String) = ActionWithJson.async(json(sampleCreateGlobalRollout)) { request =>
+    import play.api.libs.concurrent.Execution.Implicits._
+    val command = request.body
+
+    withActor(toggleId, "set-global-rollout") { toggleActor =>
+      (toggleActor ? command).map {
+        case Success =>
+          publisher.event("set-global-rollout-success", "toggle-id" -> toggleId)
+          Ok(Json.obj("status" -> "Ok", "id" -> toggleId))
+
+        case ToggleDoesNotExist(id) =>
+          publisher.event("set-global-rollout-failure", "toggle-id" -> id)
+          NotFound(errorJson(
+            "Not Found",
+            s"A toggle with id $id does not exist",
+            "Choose an existing toggle"))
+
+        case PersistFailed(id, cause) =>
+          publisher.event("set-global-rollout-failure", cause, "toggle-id" -> id)
+          InternalServerError(errorJson("Internal Server Error", cause.getMessage))
+      }
+    }
   }
 }

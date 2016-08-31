@@ -12,3 +12,5 @@ GET        /readycheck                   @toguru.app.Application.readyCheck
 GET        /toggle/:id                   @toguru.toggles.ToggleController.get(id: String)
 
 POST       /toggle                       @toguru.toggles.ToggleController.create
+
+POST       /toggle/:id/globalrollout           @toguru.toggles.ToggleController.createGlobalRollout(id: String)

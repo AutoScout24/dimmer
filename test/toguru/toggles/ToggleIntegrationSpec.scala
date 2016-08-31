@@ -45,7 +45,7 @@ class ToggleIntegrationSpec extends PlaySpec
 
       // execute
       val createResponse = await(wsClient.url(toggleEndpointURL).post(body))
-      val getResponse    = await(wsClient.url(s"$toggleEndpointURL/toggle-name").get)
+      val getResponse = await(wsClient.url(s"$toggleEndpointURL/toggle-name").get)
 
 
       // verify
@@ -56,8 +56,8 @@ class ToggleIntegrationSpec extends PlaySpec
 
       getResponse.status mustBe OK
 
-      val maybeToggle = Json.parse(getResponse.body).asOpt(Json.reads[Toggle])
-      maybeToggle mustBe Some(Toggle("toggle-name", "toggle name", "toggle description", Map("team" -> "Shared Services")))
+      val maybeToggle = Json.parse(getResponse.body).asOpt(ToggleController.toggleReads)
+      maybeToggle mustBe Some(Toggle("toggle-name", "toggle name", "toggle description", Map("team" -> "Shared Services"), None))
     }
 
     "reject creating duplicate toggles" in {
@@ -79,6 +79,36 @@ class ToggleIntegrationSpec extends PlaySpec
       response.status mustBe CONFLICT
       val json = Json.parse(response.body)
       (json \ "status").asOpt[String] mustBe Some("Conflict")
+    }
+  }
+
+  "RolloutEndpoint" should {
+    "successfully create global rollout condition" in {
+      // prepare
+      waitForPostgres()
+
+      val name = "create global rollout toggle"
+      val id = ToggleActor.toId(name)
+      val wsClient = app.injector.instanceOf[WSClient]
+      val toggleEndpointURL = s"http://localhost:$port/toggle"
+      val globalRolloutEndpoint = s"http://localhost:$port/toggle/$id/globalrollout"
+      val body = toggleAsString(name)
+      await(wsClient.url(toggleEndpointURL).post(body))
+
+      // execute
+      val createResponse = await(wsClient.url(globalRolloutEndpoint).post("""{"percentage": 55}"""))
+
+
+      // verify
+      val createJson = Json.parse(createResponse.body)
+      (createJson \ "status").asOpt[String] mustBe Some("Ok")
+      createResponse.status mustBe OK
+
+      val getResponse = await(wsClient.url(s"$toggleEndpointURL/$id").get)
+      val maybeToggle = Json.parse(getResponse.body).asOpt(ToggleController.toggleReads)
+
+      maybeToggle mustBe a[Some[_]]
+      maybeToggle.get.rolloutPercentage mustBe Some(55)
     }
   }
 }
