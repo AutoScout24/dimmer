@@ -23,14 +23,15 @@ import com.trueaccord.scalapb.{ScalaPbPlugin => PB}
 libraryDependencies ++= Seq(
   ws,
   filters,
-  AkkaPersistence,
+  AkkaPersistenceJdbc,
   Postgres,
   LogstashEncoder,
   PlayMetrics,
   DropwizardMetrics,
-  ScalaPbRuntime    % PB.protobufConfig,
-  ScalaTestPlus     % Test,
-  Mockito           % Test
+  ScalaPbRuntime          % PB.protobufConfig,
+  ScalaTestPlus           % Test,
+  AkkaPersistenceInmemory % Test,
+  Mockito                 % Test
 )
 
 
