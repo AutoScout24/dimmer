@@ -57,7 +57,7 @@ class ToggleIntegrationSpec extends PlaySpec
       getResponse.status mustBe OK
 
       val maybeToggle = Json.parse(getResponse.body).asOpt(ToggleController.toggleReads)
-      maybeToggle mustBe Some(Toggle("toggle-name", "toggle name", "toggle description", Map("team" -> "Shared Services"), None))
+      maybeToggle mustBe Some(Toggle("toggle-name", "toggle name", "toggle description", Map("team" -> "Shared Services")))
     }
 
     "reject creating duplicate toggles" in {

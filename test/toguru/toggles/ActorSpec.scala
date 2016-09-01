@@ -11,7 +11,7 @@ import scala.concurrent.duration._
 
 trait ActorSpec extends PlaySpec with MustMatchers with BeforeAndAfterAll with FutureAwaits with DefaultAwaitTimeout {
 
-  implicit override def defaultAwaitTimeout = 500.millis
+  implicit override def defaultAwaitTimeout = 1000.millis
 
   val config = ConfigFactory.parseResources("test-actors.conf").resolve()
 

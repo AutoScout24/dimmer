@@ -3,11 +3,8 @@ package toguru.toggles
 import akka.persistence.PersistentActor
 import toguru.logging.EventPublishing
 import akka.actor.{ActorRef, ActorSystem, Props}
-
 import ToggleActor._
-
-case class Toggle(id: String, name: String, description: String, tags: Map[String, String], rolloutPercentage: Option[Int])
-
+import akka.event.slf4j.Logger
 
 trait ToggleActorProvider {
   def create(id: String): ActorRef
@@ -41,15 +38,13 @@ object ToggleActor {
   }
 }
 
-class ToggleActor(toggleId: String) extends PersistentActor with EventPublishing {
+class ToggleActor(toggleId: String, var toggle: Option[Toggle] = None) extends PersistentActor with EventPublishing {
 
   val persistenceId = toggleId
 
-  var toggle: Option[Toggle] = None
-
   override def receiveRecover: Receive = {
     case ToggleCreated(name, description, tags) =>
-      toggle = Some(Toggle(toggleId, name, description, tags, None))
+      toggle = Some(Toggle(toggleId, name, description, tags))
     case GlobalRolloutCreated(percentage) =>
       toggle = toggle.map{ t => t.copy(rolloutPercentage = Some(percentage))}
   }
@@ -61,12 +56,13 @@ class ToggleActor(toggleId: String) extends PersistentActor with EventPublishing
         case None    => persistCreateEvent(name, description, tags)
       }
     case GetToggle => sender ! toggle
-    case CreateGlobalRolloutConditionCommand(percentage) => toggle match {
+    case CreateGlobalRolloutConditionCommand(percentage) =>
+      toggle match {
       case Some(t) => persist(GlobalRolloutCreated(percentage)) { set =>
         receiveRecover(set)
         sender ! Success
       }
-      case None   =>  sender ! ToggleDoesNotExist(toggleId)
+      case None =>  sender ! ToggleDoesNotExist(toggleId)
     }
   }
 

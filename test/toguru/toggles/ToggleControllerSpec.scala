@@ -19,7 +19,7 @@ import scala.concurrent.duration._
 
 class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
 
-  def createController(props: Props = Props(new MockToggleActor())): ToggleController = {
+  def createController(props: Props): ToggleController = {
     val system = ActorSystem()
     val factory = new ToggleActorProvider {
       def create(id: String): ActorRef = system.actorOf(props)
@@ -36,7 +36,13 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
 
   "get method" should {
     "return toggle for an existing toggle" in {
-      val controller = createController()
+      val props = Props(new Actor {
+        def receive: Receive = {
+          case GetToggle => sender ! Some(Toggle("toggle-id", "toggle", "desc"))
+        }
+      })
+
+      val controller = createController(props)
       val request = FakeRequest()
 
       val result: Future[Result] = controller.get("toggle-id")().apply(request)
@@ -48,7 +54,6 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
     }
 
     "return 404 for a non-existing toggle" in {
-
       val props = Props(new Actor {
         def receive: Receive = {
           case GetToggle => sender ! None
@@ -67,7 +72,13 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
 
   "create method" should {
     "return ok when given a create command" in {
-      val controller = createController()
+      val props = Props(new Actor {
+        def receive: Receive = {
+          case _ : CreateToggleCommand => sender ! CreateSucceeded("toggle-id")
+        }
+      })
+
+      val controller = createController(props)
       val request = FakeRequest().withBody(CreateToggleCommand("toggle", "description", Map.empty))
 
       val result: Future[Result] = controller.create().apply(request)
@@ -81,7 +92,13 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
 
   "set rollout condition" should {
     "return ok when given a create command" in {
-      val controller = createController()
+      val props = Props(new Actor {
+        def receive: Receive = {
+          case _ : CreateGlobalRolloutConditionCommand => sender ! Success
+        }
+      })
+
+      val controller = createController(props)
       val request = FakeRequest().withBody(CreateGlobalRolloutConditionCommand(42))
 
       val result: Future[Result] = controller.createGlobalRollout("toggle-id").apply(request)
@@ -93,21 +110,22 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
     }
 
     "returns not found when toggle does not exist" in {
-      val controller = createController(Props(new Actor{
+      val controller = createController(Props(new Actor {
         override def receive = { case _ => sender ! ToggleDoesNotExist("toggle-id") }
       }))
       val request = FakeRequest().withBody(CreateGlobalRolloutConditionCommand(42))
 
       val result: Future[Result] = controller.createGlobalRollout("toggle-id").apply(request)
-
-      val bodyJson: JsValue = contentAsJson(result)
+      
       status(result) mustBe 404
     }
   }
 
   "withActor" should {
     "return 500 when actor request times out" in {
-      val controller = createController(Props(new MockLazyActor()))
+      val controller = createController(Props(new Actor {
+        override def receive = { case _ => () }
+      }))
       val timeout = Timeout(50.millis)
       import play.api.libs.concurrent.Execution.Implicits._
 
@@ -119,20 +137,6 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
       status(result) mustBe 500
       (bodyJson \ "status").asOpt[String] mustBe Some("Internal server error")
       (bodyJson \ "reason").asOpt[String] mustBe Some("An internal error occurred")
-    }
-  }
-
-  class MockToggleActor extends Actor {
-    def receive: Receive = {
-      case GetToggle               => sender ! Some(Toggle("toggle-id", "toggle", "desc", Map("team" -> "SharedServices"), None))
-      case _ : CreateGlobalRolloutConditionCommand => sender ! Success
-      case _ : CreateToggleCommand => sender ! CreateSucceeded("toggle-id")
-    }
-  }
-
-  class MockLazyActor extends Actor {
-    def receive: Receive = {
-      case _ => ()
     }
   }
 }
