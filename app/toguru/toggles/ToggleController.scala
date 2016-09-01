@@ -27,6 +27,7 @@ object ToggleController {
 
   val sampleCreateToggle = CreateToggleCommand("toggle name", "toggle description", Map("team" -> "Shared Services"))
   val sampleCreateGlobalRollout = CreateGlobalRolloutConditionCommand(42)
+  val sampleUpdateGlobalRollout = sampleCreateGlobalRollout
 
 }
 
@@ -103,21 +104,52 @@ class ToggleController(config: Config, provider: ToggleActorProvider) extends Co
     import play.api.libs.concurrent.Execution.Implicits._
     val command = request.body
 
-    withActor(toggleId, "set-global-rollout") { toggleActor =>
+    withActor(toggleId, "create-global-rollout") { toggleActor =>
       (toggleActor ? command).map {
         case Success =>
-          publisher.event("set-global-rollout-success", "toggle-id" -> toggleId)
+          publisher.event("create-global-rollout-success", "toggle-id" -> toggleId)
           Ok(Json.obj("status" -> "Ok", "id" -> toggleId))
 
         case ToggleDoesNotExist(id) =>
-          publisher.event("set-global-rollout-failure", "toggle-id" -> id)
+          publisher.event("create-global-rollout-failure", "toggle-id" -> id)
+          NotFound(errorJson(
+            "Not Found",
+            s"The toggle with id $id does not exist",
+            "Choose an existing toggle"))
+
+        case PersistFailed(id, cause) =>
+          publisher.event("create-global-rollout-failure", cause, "toggle-id" -> id)
+          InternalServerError(errorJson("Internal Server Error", cause.getMessage))
+      }
+    }
+  }
+
+  def updateGlobalRollout(toggleId: String) = ActionWithJson.async(json(sampleUpdateGlobalRollout))  { request =>
+    import play.api.libs.concurrent.Execution.Implicits._
+    val command = request.body
+
+    withActor(toggleId, "update-global-rollout") { toggleActor =>
+      (toggleActor ? command).map {
+        case Success =>
+          publisher.event("update-global-rollout-success", "toggle-id" -> toggleId)
+          Ok(Json.obj("status" -> "Ok", "id" -> toggleId))
+
+        case ToggleDoesNotExist(id) =>
+          publisher.event("update-global-rollout-failure", "toggle-id" -> id)
           NotFound(errorJson(
             "Not Found",
             s"A toggle with id $id does not exist",
             "Choose an existing toggle"))
 
+        case GlobalRolloutConditionDoesNotExist(id) =>
+          publisher.event("update-global-rollout-failure", "toggle-id" -> id)
+          NotFound(errorJson(
+            "Not Found",
+            s"The toggle with id $id does not have a rollout condition",
+            "Please create a rollout condition"))
+
         case PersistFailed(id, cause) =>
-          publisher.event("set-global-rollout-failure", cause, "toggle-id" -> id)
+          publisher.event("update-global-rollout-failure", cause, "toggle-id" -> id)
           InternalServerError(errorJson("Internal Server Error", cause.getMessage))
       }
     }

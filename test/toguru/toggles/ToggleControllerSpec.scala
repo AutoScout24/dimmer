@@ -116,7 +116,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
       val request = FakeRequest().withBody(CreateGlobalRolloutConditionCommand(42))
 
       val result: Future[Result] = controller.createGlobalRollout("toggle-id").apply(request)
-      
+
       status(result) mustBe 404
     }
   }

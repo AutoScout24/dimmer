@@ -16,6 +16,8 @@ object ToggleActor {
 
   case class CreateGlobalRolloutConditionCommand(percentage: Int)
 
+  case class UpdateGlobalRolloutConditionCommand(percentage: Int)
+
   case class CreateSucceeded(id: String)
 
   case class PersistFailed(id: String, cause: Throwable)
@@ -23,6 +25,8 @@ object ToggleActor {
   case class ToggleAlreadyExists(id: String)
 
   case class ToggleDoesNotExist(id: String)
+
+  case class GlobalRolloutConditionDoesNotExist(id: String)
 
   case object Success
 
@@ -47,6 +51,8 @@ class ToggleActor(toggleId: String, var toggle: Option[Toggle] = None) extends P
       toggle = Some(Toggle(toggleId, name, description, tags))
     case GlobalRolloutCreated(percentage) =>
       toggle = toggle.map{ t => t.copy(rolloutPercentage = Some(percentage))}
+    case GlobalRolloutUpdated(percentage) =>
+      toggle = toggle.map{ t => t.copy(rolloutPercentage = Some(percentage))}
   }
 
   override def receiveCommand: Receive = {
@@ -55,15 +61,27 @@ class ToggleActor(toggleId: String, var toggle: Option[Toggle] = None) extends P
         case Some(_) => sender ! ToggleAlreadyExists(toggleId)
         case None    => persistCreateEvent(name, description, tags)
       }
+
     case GetToggle => sender ! toggle
-    case CreateGlobalRolloutConditionCommand(percentage) =>
-      toggle match {
-      case Some(t) => persist(GlobalRolloutCreated(percentage)) { set =>
-        receiveRecover(set)
-        sender ! Success
+
+    case UpdateGlobalRolloutConditionCommand(percentage) =>
+     withExistingToggle { t =>
+          t.rolloutPercentage match {
+            case Some(p) => persist(GlobalRolloutUpdated) { set =>
+              receiveRecover(set)
+              sender ! Success
+            }
+            case None => sender ! GlobalRolloutConditionDoesNotExist(toggleId)
+          }
       }
-      case None =>  sender ! ToggleDoesNotExist(toggleId)
-    }
+
+    case CreateGlobalRolloutConditionCommand(percentage) =>
+      withExistingToggle { t =>
+        persist(GlobalRolloutCreated(percentage)) { set =>
+          receiveRecover(set)
+          sender ! Success
+        }
+      }
   }
 
   def persistCreateEvent(name: String, description: String, tags: Map[String, String]): Unit = {
@@ -75,5 +93,12 @@ class ToggleActor(toggleId: String, var toggle: Option[Toggle] = None) extends P
 
   override protected def onPersistFailure(cause: Throwable, event: Any, seqNr: Long): Unit = {
     sender ! PersistFailed(toggleId, cause)
+  }
+
+  def withExistingToggle(handler: Toggle => Unit): Unit = {
+    toggle match {
+      case Some(t) => handler(t)
+      case None    =>  sender ! ToggleDoesNotExist(toggleId)
+    }
   }
 }
