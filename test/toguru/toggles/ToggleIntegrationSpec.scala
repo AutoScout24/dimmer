@@ -2,7 +2,6 @@ package toguru.toggles
 
 import toguru.PostgresSetup
 import toguru.app.Config
-import toguru.toggles.ToggleActor.GetToggle
 import play.api.test.Helpers._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.{OneServerPerSuite, PlaySpec}
@@ -35,7 +34,7 @@ class ToggleIntegrationSpec extends PlaySpec
     val globalRolloutEndpoint = s"http://localhost:$port/toggle/$toggleId/globalrollout"
     val wsClient = app.injector.instanceOf[WSClient]
 
-    def getToggle(): Toggle = {
+    def fetchToggle(): Toggle = {
       val getResponse = await(wsClient.url(s"$toggleEndpointURL/$toggleId").get)
       Json.parse(getResponse.body).as(ToggleController.toggleReads)
     }
@@ -53,7 +52,7 @@ class ToggleIntegrationSpec extends PlaySpec
       verifyResponseIsOk(createResponse)
 
       val maybeToggle = Json.parse(getResponse.body).asOpt(ToggleController.toggleReads)
-      maybeToggle mustBe Some(Toggle("toggle-name", "toggle name", "toggle description", Map("team" -> "Shared Services")))
+      maybeToggle mustBe Some(Toggle(toggleId, name, "toggle description", Map("team" -> "Shared Services")))
     }
 
     "create a global rollout condition" in {
@@ -61,12 +60,12 @@ class ToggleIntegrationSpec extends PlaySpec
       val body = """{"percentage": 55}"""
 
       // execute
-      val createResponse = await(wsClient.url(globalRolloutEndpoint).post(body))
+      val createResponse = await(wsClient.url(globalRolloutEndpoint).put(body))
 
       // verify
       verifyResponseIsOk(createResponse)
 
-      getToggle().rolloutPercentage mustBe Some(55)
+      fetchToggle().rolloutPercentage mustBe Some(55)
     }
 
     "update a global rollout condition" in {
@@ -79,7 +78,7 @@ class ToggleIntegrationSpec extends PlaySpec
       // verify
       verifyResponseIsOk(updateResponse)
 
-      getToggle().rolloutPercentage mustBe Some(42)
+      fetchToggle().rolloutPercentage mustBe Some(42)
     }
   }
 

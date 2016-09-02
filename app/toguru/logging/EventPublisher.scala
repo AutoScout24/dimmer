@@ -12,15 +12,12 @@ trait Event {
 }
 
 trait EventPublishing {
-  val publisher = new EventPublisher
+  val publisher = EventPublisher
 }
 
 object EventPublisher {
   val eventLogger: Logger = LoggerFactory.getLogger("event-logger")
-}
 
-class EventPublisher {
-  import EventPublisher._
   import collection.JavaConverters._
 
   def event(name: String, fields: (String, Any)*): Unit = eventLogger.info(markers(name, fields), "")
@@ -35,4 +32,5 @@ class EventPublisher {
 
   private def markers(name: String, fields: Seq[(String, Any)]): LogstashMarker =
     appendEntries(Map(fields: _*).updated("@name", name).asJava)
+
 }

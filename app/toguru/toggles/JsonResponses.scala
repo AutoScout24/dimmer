@@ -6,8 +6,9 @@ import play.api.mvc._
 import play.api.mvc.Results._
 
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
-object RestUtils {
+trait JsonResponses extends ResultPublishing {
 
   def errorJson(status: String, reason: String): JsObject =
     Json.obj("status" -> status, "reason" -> reason)
@@ -53,6 +54,16 @@ object RestUtils {
      |Bad Request
      |  No supported $ACCEPT request header provided (given was '$givenAcceptHeaders').
      |  Include ${allowedHeaders.mkString(", or")} in the $ACCEPT request header""".stripMargin)
+  }
+
+  def serverError(actionId: String, id: String): PartialFunction[Throwable, Result] = {
+    case NonFatal(ex) =>
+      publishFailure(actionId, id, ex)
+      InternalServerError(errorJson(
+        "Internal server error",
+        "An internal error occurred",
+        "Try again later or contact service owning team"
+      ))
   }
 
   object OnlyJson extends ActionFilter[Request] with HeaderNames with AcceptExtractors {
