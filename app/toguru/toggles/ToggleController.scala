@@ -22,12 +22,15 @@ object ToggleController {
   implicit val globalRolloutReads = Json.reads[CreateGlobalRolloutConditionCommand]
   implicit val globalRolloutWrites = Json.writes[CreateGlobalRolloutConditionCommand]
 
+  implicit val updateGlobalRolloutReads = Json.reads[UpdateGlobalRolloutConditionCommand]
+  implicit val updateGlobalRolloutWrites = Json.writes[UpdateGlobalRolloutConditionCommand]
+
   implicit val toggleWrites = Json.writes[Toggle]
   implicit val toggleReads  = Json.reads[Toggle]
 
   val sampleCreateToggle = CreateToggleCommand("toggle name", "toggle description", Map("team" -> "Shared Services"))
   val sampleCreateGlobalRollout = CreateGlobalRolloutConditionCommand(42)
-  val sampleUpdateGlobalRollout = sampleCreateGlobalRollout
+  val sampleUpdateGlobalRollout = UpdateGlobalRolloutConditionCommand(43)
 
 }
 

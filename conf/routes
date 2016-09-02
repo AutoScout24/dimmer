@@ -15,4 +15,4 @@ POST       /toggle                       @toguru.toggles.ToggleController.create
 
 POST       /toggle/:id/globalrollout     @toguru.toggles.ToggleController.createGlobalRollout(id: String)
 
-PUT       /toggle/:id/globalrollout      @toguru.toggles.ToggleController.updateGlobalRollout(id: String)
+PUT        /toggle/:id/globalrollout      @toguru.toggles.ToggleController.updateGlobalRollout(id: String)

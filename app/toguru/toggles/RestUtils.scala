@@ -49,10 +49,10 @@ object RestUtils {
     import HeaderNames.ACCEPT
 
     val givenAcceptHeaders = request.acceptedTypes.mkString(", ")
-    BadRequest(errorJson(
-      "Bad Request",
-      s"No supported $ACCEPT request header provided (given was '$givenAcceptHeaders').",
-      s"Include ${allowedHeaders.mkString(", or")} in the $ACCEPT request header"))
+    BadRequest(s"""
+     |Bad Request
+     |  No supported $ACCEPT request header provided (given was '$givenAcceptHeaders').
+     |  Include ${allowedHeaders.mkString(", or")} in the $ACCEPT request header""".stripMargin)
   }
 
   object OnlyJson extends ActionFilter[Request] with HeaderNames with AcceptExtractors {

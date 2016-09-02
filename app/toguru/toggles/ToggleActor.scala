@@ -67,7 +67,7 @@ class ToggleActor(toggleId: String, var toggle: Option[Toggle] = None) extends P
     case UpdateGlobalRolloutConditionCommand(percentage) =>
      withExistingToggle { t =>
           t.rolloutPercentage match {
-            case Some(p) => persist(GlobalRolloutUpdated) { set =>
+            case Some(p) => persist(GlobalRolloutUpdated(percentage)) { set =>
               receiveRecover(set)
               sender ! Success
             }

@@ -7,7 +7,7 @@ import play.api.test.Helpers._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.{OneServerPerSuite, PlaySpec}
 import play.api.libs.json.Json
-import play.api.libs.ws.WSClient
+import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.Results
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits}
 
@@ -23,92 +23,70 @@ class ToggleIntegrationSpec extends PlaySpec
 
   override protected def afterAll(): Unit = stopPostgres()
 
-  def getToggle(name: String): Option[Toggle] = {
-    import akka.pattern.ask
 
-    val actor = ToggleActor.provider(app.actorSystem).create(ToggleActor.toId(name))
-    await((actor ? GetToggle).mapTo[Option[Toggle]])
-  }
 
   def toggleAsString(name: String) =
     s"""{"name" : "$name", "description" : "toggle description", "tags" : {"team" : "Shared Services"}}"""
 
-  "ToggleEndpoint" should {
-    "successfully create toggles" in {
+  "Toggle API" should {
+    val name = "toggle name"
+    val toggleId = ToggleActor.toId(name)
+    val toggleEndpointURL = s"http://localhost:$port/toggle"
+    val globalRolloutEndpoint = s"http://localhost:$port/toggle/$toggleId/globalrollout"
+    val wsClient = app.injector.instanceOf[WSClient]
+
+    def getToggle(): Toggle = {
+      val getResponse = await(wsClient.url(s"$toggleEndpointURL/$toggleId").get)
+      Json.parse(getResponse.body).as(ToggleController.toggleReads)
+    }
+
+    "create a toggle" in {
       // prepare
       waitForPostgres()
 
-      val name = "toggle name"
-      val wsClient = app.injector.instanceOf[WSClient]
-      val toggleEndpointURL = s"http://localhost:$port/toggle"
       val body = toggleAsString(name)
-
       // execute
       val createResponse = await(wsClient.url(toggleEndpointURL).post(body))
       val getResponse = await(wsClient.url(s"$toggleEndpointURL/toggle-name").get)
 
-
       // verify
-      createResponse.status mustBe OK
-      val json = Json.parse(createResponse.body)
-
-      (json \ "status").asOpt[String] mustBe Some("Ok")
-
-      getResponse.status mustBe OK
+      verifyResponseIsOk(createResponse)
 
       val maybeToggle = Json.parse(getResponse.body).asOpt(ToggleController.toggleReads)
       maybeToggle mustBe Some(Toggle("toggle-name", "toggle name", "toggle description", Map("team" -> "Shared Services")))
     }
 
-    "reject creating duplicate toggles" in {
+    "create a global rollout condition" in {
       // prepare
-      waitForPostgres()
-
-      val name = "toggle name 2"
-      val wsClient = app.injector.instanceOf[WSClient]
-      val toggleEndpointURL = s"http://localhost:$port/toggle"
-      val body = toggleAsString(name)
-
-      // fist request.
-      await(wsClient.url(toggleEndpointURL).post(body))
+      val body = """{"percentage": 55}"""
 
       // execute
-      // second request.
-      val response = await(wsClient.url(toggleEndpointURL).post(body))
+      val createResponse = await(wsClient.url(globalRolloutEndpoint).post(body))
 
-      response.status mustBe CONFLICT
-      val json = Json.parse(response.body)
-      (json \ "status").asOpt[String] mustBe Some("Conflict")
+      // verify
+      verifyResponseIsOk(createResponse)
+
+      getToggle().rolloutPercentage mustBe Some(55)
+    }
+
+    "update a global rollout condition" in {
+      // prepare
+      val body = """{"percentage": 42}"""
+
+      // execute
+      val updateResponse = await(wsClient.url(globalRolloutEndpoint).put("""{"percentage": 42}"""))
+
+      // verify
+      verifyResponseIsOk(updateResponse)
+
+      getToggle().rolloutPercentage mustBe Some(42)
     }
   }
 
-  "RolloutEndpoint" should {
-    "successfully create global rollout condition" in {
-      // prepare
-      waitForPostgres()
 
-      val name = "create global rollout toggle"
-      val id = ToggleActor.toId(name)
-      val wsClient = app.injector.instanceOf[WSClient]
-      val toggleEndpointURL = s"http://localhost:$port/toggle"
-      val globalRolloutEndpoint = s"http://localhost:$port/toggle/$id/globalrollout"
-      val body = toggleAsString(name)
-      await(wsClient.url(toggleEndpointURL).post(body))
-
-      // execute
-      val createResponse = await(wsClient.url(globalRolloutEndpoint).post("""{"percentage": 55}"""))
-
-
-      // verify
-      val createJson = Json.parse(createResponse.body)
-      (createJson \ "status").asOpt[String] mustBe Some("Ok")
-      createResponse.status mustBe OK
-
-      val getResponse = await(wsClient.url(s"$toggleEndpointURL/$id").get)
-      val maybeToggle = Json.parse(getResponse.body).asOpt(ToggleController.toggleReads)
-
-      maybeToggle mustBe a[Some[_]]
-      maybeToggle.get.rolloutPercentage mustBe Some(55)
-    }
+  def verifyResponseIsOk(createResponse: WSResponse): Unit = {
+    createResponse.status mustBe OK
+    val json = Json.parse(createResponse.body)
+    (json \ "status").asOpt[String] mustBe Some("Ok")
   }
 }

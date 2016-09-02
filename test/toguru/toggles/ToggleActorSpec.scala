@@ -11,6 +11,7 @@ class ToggleActorSpec extends ActorSpec {
     val toggle        = Toggle("id", "name","description")
     val createCommand = CreateToggleCommand("name", "toggle description", Map("team" -> "Shared Services"))
     val createGlobalRolloutCommand = CreateGlobalRolloutConditionCommand(42)
+    val updateGlobalRolloutCommand = UpdateGlobalRolloutConditionCommand(42)
   }
 
   "actor" should {
@@ -32,10 +33,28 @@ class ToggleActorSpec extends ActorSpec {
       result mustBe Success
     }
 
-    "reject global rollout condition command when toggle does not exists" in new ToggleActorSetup {
+    "reject create global rollout condition command when toggle does not exists" in new ToggleActorSetup {
       val actor = createActor("toggle-4")
       val doesNotExist = await((actor ? createGlobalRolloutCommand).mapTo[ToggleDoesNotExist])
       doesNotExist.id mustBe "toggle-4"
+    }
+
+    "update global rollout condition when receiving command" in new ToggleActorSetup {
+      val actor = createActor("toggle-3", Some(toggle.copy(rolloutPercentage = Some(55))))
+      val result = await(actor ? updateGlobalRolloutCommand)
+      result mustBe Success
+    }
+
+    "reject update global rollout condition command when toggle does not exists" in new ToggleActorSetup {
+      val actor = createActor("toggle-4")
+      val doesNotExist = await((actor ? updateGlobalRolloutCommand).mapTo[ToggleDoesNotExist])
+      doesNotExist.id mustBe "toggle-4"
+    }
+
+    "reject update global rollout condition command when rollout does not exists" in new ToggleActorSetup {
+      val actor = createActor("toggle-5", Some(toggle))
+      val doesNotExist = await((actor ? updateGlobalRolloutCommand).mapTo[GlobalRolloutConditionDoesNotExist])
+      doesNotExist.id mustBe "toggle-5"
     }
   }
 }

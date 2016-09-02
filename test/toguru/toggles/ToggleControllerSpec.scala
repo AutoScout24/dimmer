@@ -90,7 +90,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
     }
   }
 
-  "set rollout condition" should {
+  "create global rollout condition" should {
     "return ok when given a create command" in {
       val props = Props(new Actor {
         def receive: Receive = {
@@ -116,6 +116,44 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
       val request = FakeRequest().withBody(CreateGlobalRolloutConditionCommand(42))
 
       val result: Future[Result] = controller.createGlobalRollout("toggle-id").apply(request)
+
+      status(result) mustBe 404
+    }
+  }
+
+  "update global rollout condition" should {
+    "return ok when given a update command" in {
+      val controller = createController(Props(new Actor {
+        override def receive = { case _ => sender ! Success }
+      }))
+
+      val request = FakeRequest().withBody(UpdateGlobalRolloutConditionCommand(24))
+
+      val result: Future[Result] = controller.updateGlobalRollout("toggle-id").apply(request)
+
+      status(result) mustBe 200
+    }
+
+    "returns not found when toggle does not exist" in {
+      val controller = createController(Props(new Actor {
+        override def receive = { case _ => sender ! ToggleDoesNotExist("toggle-id") }
+      }))
+
+      val request = FakeRequest().withBody(UpdateGlobalRolloutConditionCommand(24))
+
+      val result: Future[Result] = controller.updateGlobalRollout("toggle-id").apply(request)
+
+      status(result) mustBe 404
+    }
+
+    "returns global rollout condition does not exists if no global rollout condition was created" in {
+      val controller = createController(Props(new Actor {
+        override def receive = { case _ => sender ! GlobalRolloutConditionDoesNotExist("toggle-id") }
+      }))
+
+      val request = FakeRequest().withBody(UpdateGlobalRolloutConditionCommand(24))
+
+      val result: Future[Result] = controller.updateGlobalRollout("toggle-id").apply(request)
 
       status(result) mustBe 404
     }
