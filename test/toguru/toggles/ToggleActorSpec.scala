@@ -2,34 +2,41 @@ package toguru.toggles
 
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
+import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import toguru.toggles.ToggleActor._
+
+import scala.collection.immutable.Seq
 
 class ToggleActorSpec extends ActorSpec {
 
   trait ToggleActorSetup {
-    def createActor(id: String, toggle: Option[Toggle] = None) = system.actorOf(Props(new ToggleActor(id, toggle)))
-    val toggle        = Toggle("id", "name","description")
-    val createCommand = CreateToggleCommand("name", "toggle description", Map("team" -> "Shared Services"))
+    val toggleId = "toggle-1"
+    val toggle = Toggle(toggleId, "name","description")
+    val createCommand = CreateToggleCommand(toggle.name, toggle.description, toggle.tags)
     val setGlobalRolloutCommand = SetGlobalRolloutCommand(42)
+
+    def createActor(toggle: Option[Toggle] = None) = system.actorOf(Props(new ToggleActor(toggleId, toggle)))
 
     def fetchToggle(actor: ActorRef): Toggle = await(actor ? GetToggle).asInstanceOf[Some[Toggle]].get
   }
 
   "actor" should {
     "create toggle when receiving command in initial state" in new ToggleActorSetup {
-      val actor = createActor("toggle-1")
+      val actor = createActor()
       val response = await(actor ? createCommand)
-      response mustBe CreateSucceeded("toggle-1")
+      response mustBe CreateSucceeded(toggleId)
+
+      fetchToggle(actor) mustBe toggle
     }
 
     "reject create command when toggle exists" in new ToggleActorSetup {
-      val actor = createActor("toggle-2", Some(toggle))
+      val actor = createActor(Some(toggle))
       val response = await(actor ? createCommand)
-      response mustBe ToggleAlreadyExists("toggle-2")
+      response mustBe ToggleAlreadyExists(toggleId)
     }
 
     "create global rollout condition when receiving command" in new ToggleActorSetup {
-      val actor = createActor("toggle-3", Some(toggle))
+      val actor = createActor(Some(toggle))
       val response = await(actor ? setGlobalRolloutCommand)
       response mustBe Success
 
@@ -38,7 +45,7 @@ class ToggleActorSpec extends ActorSpec {
     }
 
     "update global rollout condition when receiving command" in new ToggleActorSetup {
-      val actor = createActor("toggle-3", Some(toggle.copy(rolloutPercentage = Some(55))))
+      val actor = createActor(Some(toggle.copy(rolloutPercentage = Some(55))))
       val response = await(actor ? setGlobalRolloutCommand)
       response mustBe Success
 
@@ -46,13 +53,13 @@ class ToggleActorSpec extends ActorSpec {
     }
 
     "reject set global rollout condition command when toggle does not exists" in new ToggleActorSetup {
-      val actor = createActor("toggle-4")
+      val actor = createActor()
       val response = await(actor ? setGlobalRolloutCommand)
-      response mustBe ToggleDoesNotExist("toggle-4")
+      response mustBe ToggleDoesNotExist(toggleId)
     }
 
     "delete rollout condition when receiving command" in new ToggleActorSetup {
-      val actor = createActor("toggle-5", Some(toggle.copy(rolloutPercentage = Some(42))))
+      val actor = createActor(Some(toggle.copy(rolloutPercentage = Some(42))))
       val response = await(actor ? DeleteGlobalRolloutCommand)
       response mustBe Success
 
@@ -60,9 +67,32 @@ class ToggleActorSpec extends ActorSpec {
     }
 
     "return success on delete when rollout condition does not exist" in new ToggleActorSetup {
-      val actor = createActor("toggle-6", Some(toggle))
+      val actor = createActor(Some(toggle))
       val response = await(actor ? DeleteGlobalRolloutCommand)
       response mustBe Success
+    }
+
+    "persist toggle events" in new ToggleActorSetup {
+      val actor = createActor()
+      import akka.persistence.query.scaladsl._
+      import akka.stream.scaladsl._
+      lazy val readJournal = PersistenceQuery(system).readJournalFor("inmemory-read-journal")
+        .asInstanceOf[ReadJournal with CurrentEventsByPersistenceIdQuery]
+
+      actor ? createCommand
+      actor ? setGlobalRolloutCommand
+      actor ? SetGlobalRolloutCommand(55)
+      await(actor ? DeleteGlobalRolloutCommand)
+
+      val eventualEnvelopes = readJournal.currentEventsByPersistenceId(toggleId, 0, 100).runWith(Sink.seq)
+      val events = await(eventualEnvelopes).map(_.event)
+
+      events mustBe Seq(
+        ToggleCreated(toggle.name, toggle.description, toggle.tags),
+        GlobalRolloutCreated(setGlobalRolloutCommand.percentage),
+        GlobalRolloutUpdated(55),
+        GlobalRolloutDeleted()
+      )
     }
   }
 }
