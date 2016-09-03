@@ -40,31 +40,31 @@ object ToggleActor {
   }
 }
 
-class ToggleActor(toggleId: String, var toggle: Option[Toggle] = None) extends PersistentActor with EventPublishing {
+class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) extends PersistentActor with EventPublishing {
 
   val persistenceId = toggleId
 
   override def receiveRecover = {
     case ToggleCreated(name, description, tags) =>
-      toggle = Some(Toggle(toggleId, name, description, tags))
+      maybeToggle = Some(Toggle(toggleId, name, description, tags))
 
     case GlobalRolloutCreated(percentage) =>
-      toggle = toggle.map { t => t.copy(rolloutPercentage = Some(percentage))}
+      maybeToggle = maybeToggle.map { t => t.copy(rolloutPercentage = Some(percentage))}
 
     case GlobalRolloutUpdated(percentage) =>
-      toggle = toggle.map { t => t.copy(rolloutPercentage = Some(percentage))}
+      maybeToggle = maybeToggle.map { t => t.copy(rolloutPercentage = Some(percentage))}
 
     case GlobalRolloutDeleted() =>
-      toggle = toggle.map { t => t.copy(rolloutPercentage = None) }
+      maybeToggle = maybeToggle.map { t => t.copy(rolloutPercentage = None) }
   }
 
   override def receiveCommand = handleToggleCommands.orElse(handleGlobalRolloutCommands)
 
   def handleToggleCommands: Receive = {
-    case GetToggle => sender ! toggle
+    case GetToggle => sender ! maybeToggle
 
     case CreateToggleCommand(name, description, tags) =>
-      toggle match {
+      maybeToggle match {
         case Some(_) => sender ! ToggleAlreadyExists(toggleId)
 
         case None =>
@@ -76,16 +76,16 @@ class ToggleActor(toggleId: String, var toggle: Option[Toggle] = None) extends P
   }
 
   def handleGlobalRolloutCommands: Receive = withExistingToggle {
-    t => {
+    toggle => {
       case SetGlobalRolloutCommand(p) =>
-        val event = if(t.rolloutPercentage.isDefined) GlobalRolloutCreated(p) else GlobalRolloutUpdated(p)
-        persist(event) { set =>
-          receiveRecover(set)
+        val event = if(toggle.rolloutPercentage.isDefined) GlobalRolloutUpdated(p) else GlobalRolloutCreated(p)
+        persist(event) { event =>
+          receiveRecover(event)
           sender ! Success
         }
 
       case DeleteGlobalRolloutCommand =>
-        t.rolloutPercentage match {
+        toggle.rolloutPercentage match {
           case Some(_) =>
             persist(GlobalRolloutDeleted()) { deleted =>
               receiveRecover(deleted)
@@ -101,7 +101,7 @@ class ToggleActor(toggleId: String, var toggle: Option[Toggle] = None) extends P
   }
 
   def withExistingToggle(handler: Toggle => Receive): Receive = {
-    case command if toggle.isDefined => handler(toggle.get)(command)
-    case _                           => sender ! ToggleDoesNotExist(toggleId)
+    case command if maybeToggle.isDefined => handler(maybeToggle.get)(command)
+    case _                                => sender ! ToggleDoesNotExist(toggleId)
   }
 }
