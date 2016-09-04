@@ -48,14 +48,14 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
     case ToggleCreated(name, description, tags) =>
       maybeToggle = Some(Toggle(toggleId, name, description, tags))
 
-    case GlobalRolloutCreated(percentage) =>
-      maybeToggle = maybeToggle.map { t => t.copy(rolloutPercentage = Some(percentage))}
+    case GlobalRolloutCreated(p) =>
+      maybeToggle = maybeToggle.map(_.copy(rolloutPercentage = Some(p)))
 
-    case GlobalRolloutUpdated(percentage) =>
-      maybeToggle = maybeToggle.map { t => t.copy(rolloutPercentage = Some(percentage))}
+    case GlobalRolloutUpdated(p) =>
+      maybeToggle = maybeToggle.map(_.copy(rolloutPercentage = Some(p)))
 
     case GlobalRolloutDeleted() =>
-      maybeToggle = maybeToggle.map { t => t.copy(rolloutPercentage = None) }
+      maybeToggle = maybeToggle.map(_.copy(rolloutPercentage = None))
   }
 
   override def receiveCommand = handleToggleCommands.orElse(handleGlobalRolloutCommands)

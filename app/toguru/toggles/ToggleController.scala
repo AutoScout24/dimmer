@@ -15,14 +15,9 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object ToggleController extends Results with JsonResponses with ToggleActorResponses {
 
-  implicit val toggleWrites = Json.writes[Toggle]
-  implicit val toggleReads  = Json.reads[Toggle]
-
-  implicit val createToggleReads = Json.reads[CreateToggleCommand]
-  implicit val createToggleWrites = Json.writes[CreateToggleCommand]
-
-  implicit val globalRolloutReads = Json.reads[SetGlobalRolloutCommand]
-  implicit val globalRolloutWrites = Json.writes[SetGlobalRolloutCommand]
+  implicit val toggleFormat = Json.format[Toggle]
+  implicit val createToggleFormat = Json.format[CreateToggleCommand]
+  implicit val globalRolloutFormat = Json.format[SetGlobalRolloutCommand]
 
   val sampleCreateToggle = CreateToggleCommand("toggle name", "toggle description", Map("team" -> "Toguru team"))
   val sampleSetGlobalRollout = SetGlobalRolloutCommand(42)

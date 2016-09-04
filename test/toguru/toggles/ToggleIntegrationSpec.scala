@@ -36,7 +36,7 @@ class ToggleIntegrationSpec extends PlaySpec
 
     def fetchToggle(): Toggle = {
       val getResponse = await(wsClient.url(s"$toggleEndpointURL/$toggleId").get)
-      Json.parse(getResponse.body).as(ToggleController.toggleReads)
+      Json.parse(getResponse.body).as(ToggleController.toggleFormat)
     }
 
     "create a toggle" in {
@@ -51,7 +51,7 @@ class ToggleIntegrationSpec extends PlaySpec
       // verify
       verifyResponseIsOk(createResponse)
 
-      val maybeToggle = Json.parse(getResponse.body).asOpt(ToggleController.toggleReads)
+      val maybeToggle = Json.parse(getResponse.body).asOpt(ToggleController.toggleFormat)
       maybeToggle mustBe Some(Toggle(toggleId, name, "toggle description", Map("team" -> "Shared Services")))
     }
 
