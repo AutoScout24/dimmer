@@ -30,13 +30,15 @@ object ToggleActor {
 
   case class PersistFailed(id: String, cause: Throwable)
 
+  case object Shutdown
+
   def toId(name: String): String = name.trim.toLowerCase.replaceAll("\\s+", "-")
 
   def provider(system: ActorSystem) = new ToggleActorProvider {
 
     def create(id: String): ActorRef = system.actorOf(Props(new ToggleActor(id)))
 
-    def stop(ref: ActorRef): Unit = system.stop(ref)
+    def stop(ref: ActorRef): Unit = ref ! Shutdown
   }
 }
 
@@ -61,6 +63,8 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
   override def receiveCommand = handleToggleCommands.orElse(handleGlobalRolloutCommands)
 
   def handleToggleCommands: Receive = {
+    case Shutdown => context.stop(self)
+
     case GetToggle => sender ! maybeToggle
 
     case CreateToggleCommand(name, description, tags) =>
