@@ -60,7 +60,7 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
       maybeToggle = maybeToggle.map(_.copy(rolloutPercentage = None))
   }
 
-  override def receiveCommand = handleToggleCommands.orElse(handleGlobalRolloutCommands)
+  override def receiveCommand = handleToggleCommands.orElse(withExistingToggle(t => handleGlobalRolloutCommands(t)))
 
   def handleToggleCommands: Receive = {
     case Shutdown => context.stop(self)
@@ -79,25 +79,23 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
       }
   }
 
-  def handleGlobalRolloutCommands: Receive = withExistingToggle {
-    toggle => {
-      case SetGlobalRolloutCommand(p) =>
-        val event = if(toggle.rolloutPercentage.isDefined) GlobalRolloutUpdated(p) else GlobalRolloutCreated(p)
-        persist(event) { event =>
-          receiveRecover(event)
-          sender ! Success
-        }
+  def handleGlobalRolloutCommands(toggle: Toggle): Receive =  {
+    case SetGlobalRolloutCommand(p) =>
+      val event = if(toggle.rolloutPercentage.isDefined) GlobalRolloutUpdated(p) else GlobalRolloutCreated(p)
+      persist(event) { event =>
+        receiveRecover(event)
+        sender ! Success
+      }
 
-      case DeleteGlobalRolloutCommand =>
-        toggle.rolloutPercentage match {
-          case Some(_) =>
-            persist(GlobalRolloutDeleted()) { deleted =>
-              receiveRecover(deleted)
-              sender ! Success
-            }
-          case None => sender ! Success
-        }
-    }
+    case DeleteGlobalRolloutCommand =>
+      toggle.rolloutPercentage match {
+        case Some(_) =>
+          persist(GlobalRolloutDeleted()) { deleted =>
+            receiveRecover(deleted)
+            sender ! Success
+          }
+        case None => sender ! Success
+      }
   }
 
   override protected def onPersistFailure(cause: Throwable, event: Any, seqNr: Long): Unit = {
