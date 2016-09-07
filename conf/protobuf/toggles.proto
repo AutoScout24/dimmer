@@ -6,7 +6,7 @@ package toguru;
 
 message Metadata {
     int64  time = 1;
-    string name = 2;
+    string username = 2;
 }
 
 message ToggleCreated {

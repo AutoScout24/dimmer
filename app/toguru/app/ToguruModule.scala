@@ -2,6 +2,9 @@ package toguru.app
 
 import javax.inject.Singleton
 
+import akka.actor.ActorSystem
+import akka.persistence.jdbc.query.scaladsl.JdbcReadJournal
+import akka.persistence.query.PersistenceQuery
 import com.google.inject.{AbstractModule, Provides}
 import play.api.libs.concurrent.AkkaGuiceSupport
 import slick.backend.DatabaseConfig
@@ -18,4 +21,8 @@ class ToguruModule extends AbstractModule with AkkaGuiceSupport {
 
   @Provides @Singleton
   def dbConfig: DatabaseConfig[JdbcDriver] = DatabaseConfig.forConfig("slick")
+
+  @Provides @Singleton
+  def readJournal(system: ActorSystem): JdbcReadJournal =
+    PersistenceQuery(system).readJournalFor[JdbcReadJournal](JdbcReadJournal.Identifier)
 }
