@@ -25,7 +25,7 @@ class ToggleIntegrationSpec extends PlaySpec
 
 
   def toggleAsString(name: String) =
-    s"""{"name" : "$name", "description" : "toggle description", "tags" : {"team" : "Shared Services"}}"""
+    s"""{"name" : "$name", "description" : "toggle description", "tags" : {"team" : "Toguru team"}}"""
 
   "Toggle API" should {
     val name = "toggle name"
@@ -52,7 +52,7 @@ class ToggleIntegrationSpec extends PlaySpec
       verifyResponseIsOk(createResponse)
 
       val maybeToggle = Json.parse(getResponse.body).asOpt(ToggleController.toggleFormat)
-      maybeToggle mustBe Some(Toggle(toggleId, name, "toggle description", Map("team" -> "Shared Services")))
+      maybeToggle mustBe Some(Toggle(toggleId, name, "toggle description", Map("team" -> "Toguru team")))
     }
 
     "create a global rollout condition" in {

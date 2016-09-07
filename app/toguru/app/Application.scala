@@ -13,10 +13,6 @@ import scala.concurrent.duration._
 
 class Application @Inject() (@Named("health") healthActor: ActorRef) extends Controller {
 
-  def index = Action {
-    Ok("Your new application is ready.")
-  }
-
   def healthCheck = Action.async { handleHealthRequest(Ok) }
 
   def readyCheck  = Action.async {  handleHealthRequest() }

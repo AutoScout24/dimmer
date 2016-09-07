@@ -3,16 +3,16 @@
 # ~~~~
 
 # Home page
-GET        /                             @toguru.app.Application.index
+GET        /healthcheck                @toguru.app.Application.healthCheck
 
-GET        /healthcheck                  @toguru.app.Application.healthCheck
+GET        /readycheck                 @toguru.app.Application.readyCheck
 
-GET        /readycheck                   @toguru.app.Application.readyCheck
+GET        /toggle/:id                 @toguru.toggles.ToggleController.get(id: String)
 
-GET        /toggle/:id                   @toguru.toggles.ToggleController.get(id: String)
+POST       /toggle                     @toguru.toggles.ToggleController.create
 
-POST       /toggle                       @toguru.toggles.ToggleController.create
+PUT        /toggle/:id/globalrollout   @toguru.toggles.ToggleController.setGlobalRollout(id: String)
 
-PUT        /toggle/:id/globalrollout      @toguru.toggles.ToggleController.setGlobalRollout(id: String)
+DELETE     /toggle/:id/globalrollout   @toguru.toggles.ToggleController.deleteGlobalRollout(id: String)
 
-DELETE     /toggle/:id/globalrollout      @toguru.toggles.ToggleController.deleteGlobalRollout(id: String)
+GET        /togglestate                @toguru.toggles.ToggleStateController.get

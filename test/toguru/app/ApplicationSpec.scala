@@ -20,24 +20,8 @@ class ApplicationSpec extends PlaySpec with Results {
     bodyText mustBe "Ok"
   }
 
-  "Application" should {
-
-    "render the index page" in {
-      val controller: Application = createAppController
-      val result: Future[Result] = controller.index().apply(FakeRequest(GET, "/"))
-
-      status(result) mustBe OK
-      contentType(result) mustBe Some("text/plain")
-      contentAsString(result) mustBe "Your new application is ready."
-    }
-  }
-
-  def createAppController: Application = new Application(ActorSystem().actorOf(Props[MockActor]))
-}
-
-class MockActor extends Actor {
-
-  def receive = {
-    case _ => sender ! HealthStatus(true)
-  }
+  def createAppController: Application =
+    new Application(ActorSystem().actorOf(Props(new Actor {
+      def receive = { case _ => sender ! HealthStatus(true) }
+    })))
 }
