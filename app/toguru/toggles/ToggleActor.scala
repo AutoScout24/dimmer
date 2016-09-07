@@ -47,16 +47,16 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
   val persistenceId = toggleId
 
   override def receiveRecover = {
-    case ToggleCreated(name, description, tags) =>
+    case ToggleCreated(name, description, tags, _) =>
       maybeToggle = Some(Toggle(toggleId, name, description, tags))
 
-    case GlobalRolloutCreated(p) =>
+    case GlobalRolloutCreated(p, _) =>
       maybeToggle = maybeToggle.map(_.copy(rolloutPercentage = Some(p)))
 
-    case GlobalRolloutUpdated(p) =>
+    case GlobalRolloutUpdated(p, _) =>
       maybeToggle = maybeToggle.map(_.copy(rolloutPercentage = Some(p)))
 
-    case GlobalRolloutDeleted() =>
+    case GlobalRolloutDeleted(_) =>
       maybeToggle = maybeToggle.map(_.copy(rolloutPercentage = None))
   }
 
@@ -72,7 +72,7 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
         case Some(_) => sender ! ToggleAlreadyExists(toggleId)
 
         case None =>
-          persist(ToggleCreated(name, description, tags)) { created =>
+          persist(ToggleCreated(name, description, tags, meta)) { created =>
             receiveRecover(created)
             sender ! CreateSucceeded(toggleId)
           }
@@ -81,7 +81,7 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
 
   def handleGlobalRolloutCommands(toggle: Toggle): Receive =  {
     case SetGlobalRolloutCommand(p) =>
-      val event = if(toggle.rolloutPercentage.isDefined) GlobalRolloutUpdated(p) else GlobalRolloutCreated(p)
+      val event = if(toggle.rolloutPercentage.isDefined) GlobalRolloutUpdated(p, meta) else GlobalRolloutCreated(p, meta)
       persist(event) { event =>
         receiveRecover(event)
         sender ! Success
@@ -90,13 +90,17 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
     case DeleteGlobalRolloutCommand =>
       toggle.rolloutPercentage match {
         case Some(_) =>
-          persist(GlobalRolloutDeleted()) { deleted =>
+          persist(GlobalRolloutDeleted(meta)) { deleted =>
             receiveRecover(deleted)
             sender ! Success
           }
         case None => sender ! Success
       }
   }
+
+  def meta = Some(Metadata(time, ""))
+
+  def time = System.currentTimeMillis()
 
   override protected def onPersistFailure(cause: Throwable, event: Any, seqNr: Long): Unit = {
     sender ! PersistFailed(toggleId, cause)

@@ -73,7 +73,10 @@ class ToggleActorSpec extends ActorSpec {
     }
 
     "persist toggle events" in new ToggleActorSetup {
-      val actor = createActor()
+      val actor = system.actorOf(Props(new ToggleActor(toggleId, None) {
+        override def time = 0
+      }))
+
       import akka.persistence.query.scaladsl._
       import akka.stream.scaladsl._
       lazy val readJournal = PersistenceQuery(system).readJournalFor("inmemory-read-journal")
@@ -86,12 +89,12 @@ class ToggleActorSpec extends ActorSpec {
 
       val eventualEnvelopes = readJournal.currentEventsByPersistenceId(toggleId, 0, 100).runWith(Sink.seq)
       val events = await(eventualEnvelopes).map(_.event)
-
+      val meta = Some(Metadata(0, ""))
       events mustBe Seq(
-        ToggleCreated(toggle.name, toggle.description, toggle.tags),
-        GlobalRolloutCreated(setGlobalRolloutCommand.percentage),
-        GlobalRolloutUpdated(55),
-        GlobalRolloutDeleted()
+        ToggleCreated(toggle.name, toggle.description, toggle.tags, meta),
+        GlobalRolloutCreated(setGlobalRolloutCommand.percentage, meta),
+        GlobalRolloutUpdated(55, meta),
+        GlobalRolloutDeleted(meta)
       )
     }
   }

@@ -4,23 +4,32 @@ import "scalapb/scalapb.proto";
 
 package toguru;
 
+message Metadata {
+    int64  time = 1;
+    string name = 2;
+}
+
 message ToggleCreated {
     option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
     string name = 1;
     string description = 2;
     map<string, string> tags = 3;
+    Metadata meta = 4;
 }
 
 message GlobalRolloutCreated {
     option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
     int32 percentage = 1;
+    Metadata meta = 2;
 }
 
 message GlobalRolloutUpdated {
     option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
     int32 percentage = 1;
+    Metadata meta = 2;
 }
 
 message GlobalRolloutDeleted {
     option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
+    Metadata meta = 1;
 }
