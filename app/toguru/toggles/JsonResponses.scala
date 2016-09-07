@@ -56,9 +56,9 @@ trait JsonResponses extends ResultPublishing {
      |  Include ${allowedHeaders.mkString(", or")} in the $ACCEPT request header""".stripMargin)
   }
 
-  def serverError(actionId: String, id: String): PartialFunction[Throwable, Result] = {
+  def serverError(actionId: String, fields: (String, Any)*): PartialFunction[Throwable, Result] = {
     case NonFatal(ex) =>
-      publishFailure(actionId, id, ex)
+      publishFailure(actionId, ex, fields: _*)
       InternalServerError(errorJson(
         "Internal server error",
         "An internal error occurred",

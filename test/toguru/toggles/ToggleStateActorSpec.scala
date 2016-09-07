@@ -32,7 +32,7 @@ class ToggleStateActorSpec extends ActorSpec {
 
       val id1 = "toggle-1"
       val id2 = "toggle-2"
-      
+
       actor ! (id1, ToggleCreated("name", "description", Map("team" -> "Toguru team")))
       actor ! (id1, GlobalRolloutCreated(10))
       actor ! (id1, GlobalRolloutDeleted())

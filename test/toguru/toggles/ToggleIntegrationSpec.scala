@@ -22,16 +22,16 @@ class ToggleIntegrationSpec extends PlaySpec
 
   override protected def afterAll(): Unit = stopPostgres()
 
-
-
   def toggleAsString(name: String) =
     s"""{"name" : "$name", "description" : "toggle description", "tags" : {"team" : "Toguru team"}}"""
 
   "Toggle API" should {
-    val name = "toggle name"
+    val name = "toggle 1"
     val toggleId = ToggleActor.toId(name)
-    val toggleEndpointURL = s"http://localhost:$port/toggle"
+    val toggleEndpointURL     = s"http://localhost:$port/toggle"
     val globalRolloutEndpoint = s"http://localhost:$port/toggle/$toggleId/globalrollout"
+    val toggleStateEndpoint   = s"http://localhost:$port/togglestate"
+
     val wsClient = app.injector.instanceOf[WSClient]
 
     def fetchToggle(): Toggle = {
@@ -46,7 +46,7 @@ class ToggleIntegrationSpec extends PlaySpec
       val body = toggleAsString(name)
       // execute
       val createResponse = await(wsClient.url(toggleEndpointURL).post(body))
-      val getResponse = await(wsClient.url(s"$toggleEndpointURL/toggle-name").get)
+      val getResponse = await(wsClient.url(s"$toggleEndpointURL/$toggleId").get)
 
       // verify
       verifyResponseIsOk(createResponse)
@@ -73,7 +73,7 @@ class ToggleIntegrationSpec extends PlaySpec
       val body = """{"percentage": 42}"""
 
       // execute
-      val updateResponse = await(wsClient.url(globalRolloutEndpoint).put("""{"percentage": 42}"""))
+      val updateResponse = await(wsClient.url(globalRolloutEndpoint).put(body))
 
       // verify
       verifyResponseIsOk(updateResponse)
@@ -90,8 +90,29 @@ class ToggleIntegrationSpec extends PlaySpec
 
       fetchToggle().rolloutPercentage mustBe None
     }
-  }
 
+    "return current toggle state" in {
+      // prepare
+      await(wsClient.url(globalRolloutEndpoint).put("""{"percentage": 42}"""))
+      await(wsClient.url(toggleEndpointURL).post(toggleAsString("toggle 2")))
+      val tags = Map("team" -> "Toguru team")
+      implicit val reads = Json.reads[ToggleState]
+
+      // wait for the updates to become visible to the toggle state actor
+      Thread.sleep(500)
+
+      // execute
+      val response = await(wsClient.url(toggleStateEndpoint).get())
+
+      // verify
+      response.status mustBe OK
+
+      Json.parse(response.body).as[Seq[ToggleState]] mustBe Seq(
+        ToggleState("toggle-1", tags, Some(42)),
+        ToggleState("toggle-2", tags, None)
+      )
+    }
+  }
 
   def verifyResponseIsOk(createResponse: WSResponse): Unit = {
     createResponse.status mustBe OK

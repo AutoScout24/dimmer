@@ -20,7 +20,7 @@ trait ToggleActorResponses extends Results with JsonResponses {
 
   def whenPersisted(handler: ResponseHandler)(implicit actionId: String): ResponseHandler = {
     case PersistFailed(toggleId, cause) =>
-      publishFailure(actionId, toggleId, cause)
+      publishFailure(actionId, cause, "toggleId" -> toggleId)
       InternalServerError(errorJson("Internal Server Error", cause.getMessage))
 
     case r => handler(r)

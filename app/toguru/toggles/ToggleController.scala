@@ -35,7 +35,7 @@ class ToggleController(config: Config, provider: ToggleActorProvider) extends Co
   def withActor(toggleId: String)(handler: ActorRef => Future[Result])(implicit actionId: String, ec: ExecutionContext): Future[Result] = {
     val toggleActor = provider.create(toggleId)
     handler(toggleActor)
-      .recover(serverError(actionId, toggleId))
+      .recover(serverError(actionId, "toggleId" -> toggleId))
       .andThen { case _ => provider.stop(toggleActor) }
   }
 

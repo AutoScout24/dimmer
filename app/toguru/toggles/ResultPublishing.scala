@@ -10,7 +10,7 @@ trait ResultPublishing extends EventPublishing {
   def publishFailure(actionId: String, toggleId: String, fields: (String, Any)*): Unit =
     publisher.event(s"$actionId-failure", ("toggleId" -> toggleId) +: fields : _*)
 
-  def publishFailure(actionId: String, toggleId: String, cause: Throwable): Unit =
-    publisher.event(s"$actionId-failure", "cause" -> cause, "toggleId" -> toggleId)
+  def publishFailure(actionId: String, cause: Throwable, fields: (String, Any)*): Unit =
+    publisher.event(s"$actionId-failure", cause, fields: _*)
 
 }
