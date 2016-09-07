@@ -27,7 +27,7 @@ class ToggleStateActorSpec extends ActorSpec {
       response mustBe toggles
     }
 
-    "builds toggle state from events" in {
+    "build toggle state from events" in {
       val actor = createActor()
 
       val id1 = "toggle-1"

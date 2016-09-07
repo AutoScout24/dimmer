@@ -1,7 +1,8 @@
 package toguru
 
 import java.io.IOException
-import java.sql.{SQLException, Connection, DriverManager}
+import java.sql.{DriverManager, SQLException}
+
 import scala.concurrent.duration._
 import com.typesafe.config.Config
 
@@ -26,6 +27,7 @@ trait PostgresSetup {
           val statement = conn.createStatement()
           val rs = statement.executeQuery(query)
           rs.next()
+          log("Postgres is ready.")
         } finally {
           conn.close()
         }
@@ -38,7 +40,8 @@ trait PostgresSetup {
           waitForConnection()
       }
     }
-    Await.result(Future { waitForConnection() }, 30.seconds)
+    log("Waiting for Postgres...")
+    Await.result(Future { waitForConnection() }, 60.seconds)
   }
 
   var maybePostgresName:Option[String] = None

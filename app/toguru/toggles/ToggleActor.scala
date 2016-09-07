@@ -100,9 +100,15 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
 
   def meta = Some(Metadata(time, ""))
 
-  def time = System.currentTimeMillis()
+  def time = System.currentTimeMillis
 
-  override protected def onPersistFailure(cause: Throwable, event: Any, seqNr: Long): Unit = {
+  override protected def onPersistFailure(cause: Throwable, event: Any, seqNr: Long) = {
+    publisher.event("toggle-persist-failed", cause, "toggleId" -> persistenceId, "eventType" -> event.getClass.getSimpleName)
+    sender ! PersistFailed(toggleId, cause)
+  }
+
+  override protected def onPersistRejected(cause: Throwable, event: Any, seqNr: Long) = {
+    publisher.event("toggle-persist-rejected", cause, "toggleId" -> persistenceId, "eventType" -> event.getClass.getSimpleName)
     sender ! PersistFailed(toggleId, cause)
   }
 

@@ -1,14 +1,23 @@
 package toguru.toggles
 
+import akka.actor.ActorRef
+import akka.pattern.ask
+import akka.util.Timeout
 import toguru.PostgresSetup
 import toguru.app.Config
 import play.api.test.Helpers._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.{OneServerPerSuite, PlaySpec}
-import play.api.libs.json.Json
+import play.api.inject.{BindingKey, QualifierInstance}
+import play.api.libs.json.{JsArray, Json}
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.Results
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits}
+import play.inject.NamedImpl
+import toguru.toggles.ToggleStateActor.GetState
+
+import scala.concurrent.duration._
+import scala.concurrent.duration.FiniteDuration
 
 
 class ToggleIntegrationSpec extends PlaySpec
@@ -93,13 +102,15 @@ class ToggleIntegrationSpec extends PlaySpec
 
     "return current toggle state" in {
       // prepare
-      await(wsClient.url(globalRolloutEndpoint).put("""{"percentage": 42}"""))
       await(wsClient.url(toggleEndpointURL).post(toggleAsString("toggle 2")))
-      val tags = Map("team" -> "Toguru team")
-      implicit val reads = Json.reads[ToggleState]
 
-      // wait for the updates to become visible to the toggle state actor
-      Thread.sleep(500)
+
+      val actor = app.injector.instanceOf[ActorRef](namedKey(classOf[ActorRef], "toggle-state"))
+
+      waitFor(30) {
+        val toggles = await((actor ? GetState).mapTo[Map[_,_]])
+        toggles.size == 2
+      }
 
       // execute
       val response = await(wsClient.url(toggleStateEndpoint).get())
@@ -107,11 +118,32 @@ class ToggleIntegrationSpec extends PlaySpec
       // verify
       response.status mustBe OK
 
-      Json.parse(response.body).as[Seq[ToggleState]] mustBe Seq(
-        ToggleState("toggle-1", tags, Some(42)),
-        ToggleState("toggle-2", tags, None)
-      )
+      val json = Json.parse(response.body)
+      json mustBe a[JsArray]
+      json.asInstanceOf[JsArray].value.size == 2
     }
+  }
+
+  def namedKey[T](clazz: Class[T], name: String): BindingKey[T] =
+    new BindingKey(clazz, Some(QualifierInstance(new NamedImpl(name))))
+
+  /**
+    *
+    * @param times how many times we want to try.
+    * @param test returns true if test (finally) succeeded, false if we need to retry
+    */
+  def waitFor(times: Int, wait: FiniteDuration = 1.second)(test: => Boolean): Unit = {
+    val success = (1 to times).exists { i =>
+      if(test) {
+        true
+      } else {
+        if(i < times)
+          Thread.sleep(wait.toMillis)
+        false
+      }
+    }
+
+    success mustBe true
   }
 
   def verifyResponseIsOk(createResponse: WSResponse): Unit = {

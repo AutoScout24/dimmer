@@ -7,7 +7,9 @@ import com.trueaccord.scalapb.GeneratedMessage
 /**
   * Marker trait for toggle events.
   */
-trait ToggleEvent extends GeneratedMessage
+trait ToggleEvent extends GeneratedMessage {
+  def meta: Option[Metadata]
+}
 
 /**
   * Serializer for toggle events.
