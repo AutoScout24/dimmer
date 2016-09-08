@@ -1,10 +1,16 @@
+language: java
+
 sudo: required
 
 services:
   - docker
 
+jdk:
+  - oraclejdk8
+
 cache:
   directories:
+    - ~/.m2/repository
     - ~/.ivy2
     - ~/.sbt
 
@@ -13,21 +19,17 @@ before_install:
   - sudo apt-get -o Dpkg::Options::="--force-confnew" --force-yes -y install docker-engine
   - docker version
 
-language: java
-
-jdk:
-  - oraclejdk8
-
 env:
   - TOGURU_VERSION=$TRAVIS_BUILD_NUMBER
 
 script:
   - docker version
   - docker info
-  - ./activator test docker:publishLocal
+  - ./activator coverage test coverageReport coverageOff docker:publishLocal
 
 after_success:
-  - if [ "$TRAVIS_BRANCH" == "master" -a "$TRAVIS_PULL_REQUEST" = "false" ]; then
-    docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
-    docker push as24/toguru:$TRAVIS_BUILD_NUMBER;
+  - if [ "$TRAVIS_BRANCH" == "master" -a "$TRAVIS_PULL_REQUEST" = "false" -a "$TRAVIS_REPO_SLUG" = "AutoScout24/toguru" ]; then
+      docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
+      docker push as24/toguru:$TRAVIS_BUILD_NUMBER;
     fi
+  - ./activator coveralls

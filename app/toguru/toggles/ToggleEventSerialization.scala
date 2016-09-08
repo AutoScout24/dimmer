@@ -3,6 +3,7 @@ package toguru.toggles
 import akka.persistence.journal.{Tagged, WriteEventAdapter}
 import akka.serialization.SerializerWithStringManifest
 import com.trueaccord.scalapb.GeneratedMessage
+import toguru.events.toggles._
 
 /**
   * Marker trait for toggle events.

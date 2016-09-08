@@ -4,6 +4,7 @@ import akka.persistence.PersistentActor
 import toguru.logging.EventPublishing
 import akka.actor.{ActorRef, ActorSystem, Props}
 import ToggleActor._
+import toguru.events.toggles._
 
 trait ToggleActorProvider {
   def create(id: String): ActorRef

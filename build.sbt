@@ -57,7 +57,8 @@ routesGenerator := InjectedRoutesGenerator
 
 scalaVersion in ThisBuild := "2.11.8"
 
-scalacOptions in ThisBuild ++= Seq("-unchecked", "-deprecation", "-feature", "-Xfatal-warnings")
+scalacOptions in ThisBuild ++= Seq("-unchecked", "-deprecation", "-feature",
+  "-Xfatal-warnings", "-Xmax-classfile-name", "130")
 
 // Don't package API docs in dist
 doc in Compile <<= target.map(_ / "none")
@@ -80,3 +81,19 @@ scalaSource in PB.protobufConfig <<= (sourceManaged in Compile)
 // use Protocol Buffers version 3
 version in PB.protobufConfig := "3.0.0"
 PB.runProtoc in PB.protobufConfig := (args => com.github.os72.protocjar.Protoc.runProtoc("-v300" +: args.toArray))
+
+
+// *** Test coverage settings ***
+
+coverageMinimum := 80
+
+coverageFailOnMinimum := true
+
+coverageExcludedPackages := Seq(
+  """router""",                      // generated code
+  """toguru\.events\.toggles\..*""", // generated code
+  """.*ReverseApplication""",        // generated code
+  """.*Reverse.*Controller""",       // generated code
+  """toguru\.filters\..*""",         // low test value and hard to test
+  """toguru\.app\.ErrorHandler"""    // low test value and hard to test
+).mkString(";")

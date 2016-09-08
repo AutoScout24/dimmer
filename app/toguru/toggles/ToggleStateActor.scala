@@ -8,6 +8,7 @@ import akka.stream.{ActorMaterializer, Materializer}
 import ToggleStateActor._
 import akka.persistence.jdbc.query.scaladsl.JdbcReadJournal
 import toguru.logging.EventPublishing
+import toguru.events.toggles._
 
 object ToggleStateActor {
   case object Shutdown

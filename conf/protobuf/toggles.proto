@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "scalapb/scalapb.proto";
 
-package toguru;
+package toguru.events;
 
 message Metadata {
     int64  time = 1;

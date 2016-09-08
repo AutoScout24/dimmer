@@ -4,6 +4,7 @@ import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import toguru.toggles.ToggleActor._
+import toguru.events.toggles._
 
 import scala.collection.immutable.Seq
 

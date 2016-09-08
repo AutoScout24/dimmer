@@ -14,3 +14,5 @@ libraryDependencies ++= Seq(
 addSbtPlugin("com.typesafe.sbt"       % "sbt-native-packager" % "1.2.0-M5")
 addSbtPlugin("com.typesafe.play"      % "sbt-plugin"          % "2.5.4")
 addSbtPlugin("com.trueaccord.scalapb" % "sbt-scalapb"         % "0.5.38")
+addSbtPlugin("org.scoverage"          % "sbt-scoverage"       % "1.3.5")
+addSbtPlugin("org.scoverage"          % "sbt-coveralls"       % "1.1.0")

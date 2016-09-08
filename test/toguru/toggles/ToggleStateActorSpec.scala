@@ -3,6 +3,7 @@ package toguru.toggles
 import akka.pattern.ask
 import akka.actor.{ActorRef, Props}
 import toguru.toggles.ToggleStateActor.GetState
+import toguru.events.toggles._
 
 class ToggleStateActorSpec extends ActorSpec {
 
