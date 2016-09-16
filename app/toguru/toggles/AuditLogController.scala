@@ -31,13 +31,17 @@ class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: C
   val rolloutDeletedWrites = Json.writes[GlobalRolloutDeleted]
 
   implicit val toggleEventWrites = new OWrites[(String, ToggleEvent)] {
-    override def writes(o: (String, ToggleEvent)) = Json.obj("id" -> o._1) ++
-      (o._2 match {
-        case e : ToggleCreated => createdWrites.writes(e)
-        case e : GlobalRolloutCreated => rolloutCreatedWrites.writes(e)
-        case e : GlobalRolloutUpdated => rolloutUpdatedWrites.writes(e)
-        case e : GlobalRolloutDeleted => rolloutDeletedWrites.writes(e)
-      })
+
+    def fields(id: String, event: String) =
+      Json.obj("id" -> id, "event" -> event)
+
+    override def writes(o: (String, ToggleEvent)) =
+      o._2 match {
+        case e : ToggleCreated        => fields(o._1, "toggle created")  ++ createdWrites.writes(e)
+        case e : GlobalRolloutCreated => fields(o._1, "rollout created") ++ rolloutCreatedWrites.writes(e)
+        case e : GlobalRolloutUpdated => fields(o._1, "rollout updated") ++ rolloutUpdatedWrites.writes(e)
+        case e : GlobalRolloutDeleted => fields(o._1, "rollout deleted") ++ rolloutDeletedWrites.writes(e)
+      }
   }
 
   def get = ActionWithJson.async { request =>
@@ -50,6 +54,4 @@ class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: C
         Ok(Json.toJson(log))
     }.recover(serverError("get-toggle-audit"))
   }
-
-
 }
