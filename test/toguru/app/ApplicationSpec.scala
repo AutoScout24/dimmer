@@ -14,14 +14,31 @@ class ApplicationSpec extends PlaySpec with Results {
 
   "health check should return ok" in {
 
-    val controller: Application = createAppController
-    val result: Future[Result] = controller.healthCheck().apply(FakeRequest(GET, "/healthcheck"))
-    val bodyText: String = contentAsString(result)
+    val controller = createAppController()
+    val result = controller.healthCheck().apply(FakeRequest(GET, "/healthcheck"))
+    val bodyText = contentAsString(result)
     bodyText mustBe "Ok"
   }
 
-  def createAppController: Application =
-    new Application(ActorSystem().actorOf(Props(new Actor {
-      def receive = { case _ => sender ! HealthStatus(true) }
-    })))
+  "ready check should return ok" in {
+
+    val controller = createAppController()
+    val result = controller.readyCheck().apply(FakeRequest(GET, "/readycheck"))
+    val bodyText = contentAsString(result)
+    bodyText mustBe "Ok"
+  }
+
+  "ready check should return database not available" in {
+    val controller = createAppController(
+      Props(new Actor { def receive = { case _ => sender ! HealthStatus(false) } })
+    )
+    val result = controller.readyCheck().apply(FakeRequest(GET, "/readycheck"))
+    val bodyText = contentAsString(result)
+    bodyText mustBe "Database not available"
+  }
+
+  val healthyProps = Props(new Actor { def receive = { case _ => sender ! HealthStatus(true) } })
+
+  def createAppController(props: Props =  healthyProps): Application =
+    new Application(ActorSystem().actorOf(props))
 }

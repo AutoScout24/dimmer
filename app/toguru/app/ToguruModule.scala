@@ -9,7 +9,7 @@ import com.google.inject.{AbstractModule, Provides}
 import play.api.libs.concurrent.AkkaGuiceSupport
 import slick.backend.DatabaseConfig
 import slick.driver.JdbcDriver
-import toguru.toggles.ToggleStateActor
+import toguru.toggles.{AuditLogActor, ToggleStateActor}
 
 class ToguruModule extends AbstractModule with AkkaGuiceSupport {
 
@@ -19,6 +19,7 @@ class ToguruModule extends AbstractModule with AkkaGuiceSupport {
 
     bindActor[HealthActor]("health")
     bindActor[ToggleStateActor]("toggle-state")
+    bindActor[AuditLogActor]("audit-log")
   }
 
   @Provides @Singleton

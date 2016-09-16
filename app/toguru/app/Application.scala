@@ -24,12 +24,8 @@ class Application @Inject() (@Named("health") healthActor: ActorRef) extends Con
     (healthActor ? GetHealth())
       .mapTo[HealthStatus]
       .map(toResponse(databaseUnavailableStatus))
-      .recover(serverError)
   }
 
   private def toResponse(databaseUnavailableStatus: Status)(health: HealthStatus): Result =
     if (health.isDatabaseHealthy) Ok("Ok") else databaseUnavailableStatus("Database not available")
-
-  private val serverError: PartialFunction[Throwable, Result] = { case _ => InternalServerError("Service is not available") }
-
 }

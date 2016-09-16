@@ -14,6 +14,7 @@ import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.Results
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits}
 import play.inject.NamedImpl
+import toguru.toggles.AuditLogActor.GetLog
 import toguru.toggles.ToggleStateActor.GetState
 
 import scala.concurrent.duration._
@@ -40,6 +41,7 @@ class ToggleIntegrationSpec extends PlaySpec
     val toggleEndpointURL     = s"http://localhost:$port/toggle"
     val globalRolloutEndpoint = s"http://localhost:$port/toggle/$toggleId/globalrollout"
     val toggleStateEndpoint   = s"http://localhost:$port/togglestate"
+    val auditLogEndpoint      = s"http://localhost:$port/auditlog"
 
     val wsClient = app.injector.instanceOf[WSClient]
 
@@ -104,7 +106,6 @@ class ToggleIntegrationSpec extends PlaySpec
       // prepare
       await(wsClient.url(toggleEndpointURL).post(toggleAsString("toggle 2")))
 
-
       val actor = app.injector.instanceOf[ActorRef](namedKey(classOf[ActorRef], "toggle-state"))
 
       waitFor(30) {
@@ -121,6 +122,26 @@ class ToggleIntegrationSpec extends PlaySpec
       val json = Json.parse(response.body)
       json mustBe a[JsArray]
       json.asInstanceOf[JsArray].value.size == 2
+    }
+
+    "return current audit log" in {
+
+      val actor = app.injector.instanceOf[ActorRef](namedKey(classOf[ActorRef], "audit-log"))
+
+      waitFor(30) {
+        val log = await((actor ? GetLog).mapTo[Seq[_]])
+        log.size == 5
+      }
+
+      // execute
+      val response = await(wsClient.url(auditLogEndpoint).get())
+
+      // verify
+      response.status mustBe OK
+
+      val json = Json.parse(response.body)
+      json mustBe a[JsArray]
+      json.asInstanceOf[JsArray].value.size == 5
     }
   }
 

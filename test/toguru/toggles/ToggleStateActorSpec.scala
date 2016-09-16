@@ -17,10 +17,6 @@ class ToggleStateActorSpec extends ActorSpec {
 
   "toggle state actor" should {
     "return current toggle state" in {
-      val toggles = Map(
-        "toggle-1" -> ToggleState("toggle-1", Map("team" -> "Toguru team")),
-        "toggle-2" -> ToggleState("toggle-2", rolloutPercentage = Some(20))
-      )
       val actor = createActor(toggles)
 
       val response = await(actor ? GetState)

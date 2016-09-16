@@ -3,8 +3,6 @@ package toguru.toggles
 import javax.inject.Inject
 
 import akka.actor.{Actor, ActorContext, ActorRef}
-import akka.stream.scaladsl.Sink
-import akka.stream.{ActorMaterializer, Materializer}
 import ToggleStateActor._
 import akka.persistence.jdbc.query.scaladsl.JdbcReadJournal
 import toguru.logging.EventPublishing
@@ -14,10 +12,6 @@ object ToggleStateActor {
   case object Shutdown
   case object GetState
 
-  def sendToggleEvents(readJournal: JdbcReadJournal): (ActorContext, ActorRef) => Unit = { (context, self) =>
-    implicit val mat: Materializer = ActorMaterializer()(context.system)
-    readJournal.eventsByTag("toggle", 0L).map(env => (env.persistenceId, env.event)).runWith(Sink.actorRef(self, Shutdown))
-  }
 }
 
 case class ToggleState(id: String,
@@ -28,7 +22,7 @@ class ToggleStateActor(startHook: (ActorContext, ActorRef) => Unit, var toggles:
   extends Actor with EventPublishing {
 
   @Inject()
-  def this(readJournal: JdbcReadJournal) = this(sendToggleEvents(readJournal))
+  def this(readJournal: JdbcReadJournal) = this(ToggleLog.sendToggleEvents(readJournal, Shutdown))
 
   override def preStart() = {
     startHook(context, self)
