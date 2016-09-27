@@ -11,6 +11,8 @@ GET        /toggle/:id                 @toguru.toggles.ToggleController.get(id: 
 
 POST       /toggle                     @toguru.toggles.ToggleController.create
 
+PUT        /toggle/:id                 @toguru.toggles.ToggleController.update(id: String)
+
 PUT        /toggle/:id/globalrollout   @toguru.toggles.ToggleController.setGlobalRollout(id: String)
 
 DELETE     /toggle/:id/globalrollout   @toguru.toggles.ToggleController.deleteGlobalRollout(id: String)

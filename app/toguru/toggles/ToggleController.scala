@@ -17,9 +17,11 @@ object ToggleController extends Results with JsonResponses with ToggleActorRespo
 
   implicit val toggleFormat = Json.format[Toggle]
   implicit val createToggleFormat = Json.format[CreateToggleCommand]
+  implicit val updateToggleFormat = Json.format[UpdateToggleCommand]
   implicit val globalRolloutFormat = Json.format[SetGlobalRolloutCommand]
 
   val sampleCreateToggle = CreateToggleCommand("toggle name", "toggle description", Map("team" -> "Toguru team"))
+  val sampleUpdateToggle = UpdateToggleCommand(None, Some("new toggle description"), Some(Map("team" -> "Toguru team")))
   val sampleSetGlobalRollout = SetGlobalRolloutCommand(42)
 }
 
@@ -70,6 +72,21 @@ class ToggleController(config: Config, provider: ToggleActorProvider) extends Co
         case ToggleAlreadyExists(id) =>
           publisher.event(s"$actionId-conflict", "toggleId" -> id)
           Conflict(errorJson("Conflict", s"A toggle with id $id already exists", "Choose different toggle name"))
+      })
+    }
+  }
+
+  def update(toggleId: String) = ActionWithJson.async(json(sampleUpdateToggle)) { request =>
+    import play.api.libs.concurrent.Execution.Implicits._
+    val command  = request.body
+    implicit val actionId = "update-toggle"
+
+    withActor(toggleId) { toggleActor =>
+      (toggleActor ? command).map(
+        both(whenToggleExists, whenPersisted) {
+          case UpdateSucceeded =>
+            publishSuccess(actionId, toggleId)
+            Ok(Json.obj("status" -> "Ok"))
       })
     }
   }

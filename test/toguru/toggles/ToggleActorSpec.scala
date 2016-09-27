@@ -14,6 +14,7 @@ class ToggleActorSpec extends ActorSpec {
     val toggleId = "toggle-1"
     val toggle = Toggle(toggleId, "name","description")
     val createCommand = CreateToggleCommand(toggle.name, toggle.description, toggle.tags)
+    val updateCommand = UpdateToggleCommand(None, Some("new description"), Some(Map("services" -> "toguru")))
     val setGlobalRolloutCommand = SetGlobalRolloutCommand(42)
 
     def createActor(toggle: Option[Toggle] = None) = system.actorOf(Props(new ToggleActor(toggleId, toggle)))
@@ -34,6 +35,20 @@ class ToggleActorSpec extends ActorSpec {
       val actor = createActor(Some(toggle))
       val response = await(actor ? createCommand)
       response mustBe ToggleAlreadyExists(toggleId)
+    }
+
+    "update toggle when toggle exists" in new ToggleActorSetup {
+      val actor = createActor(Some(toggle))
+      val response = await(actor ? updateCommand)
+      response mustBe UpdateSucceeded
+
+      fetchToggle(actor) mustBe Toggle(toggleId, toggle.name, updateCommand.description.get, updateCommand.tags.get)
+    }
+
+    "reject update when toggle does not exist" in new ToggleActorSetup {
+      val actor = createActor()
+      val response = await(actor ? updateCommand)
+      response mustBe ToggleDoesNotExist(toggleId)
     }
 
     "create global rollout condition when receiving command" in new ToggleActorSetup {

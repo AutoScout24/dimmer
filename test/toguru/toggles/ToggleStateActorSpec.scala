@@ -34,7 +34,8 @@ class ToggleStateActorSpec extends ActorSpec {
       actor ! (id1, GlobalRolloutCreated(10))
       actor ! (id1, GlobalRolloutDeleted())
 
-      actor ! (id2, ToggleCreated("name", "description", Map.empty))
+      actor ! (id2, ToggleCreated("name", "", Map.empty))
+      actor ! (id2, ToggleUpdated("name", "description", Map.empty))
       actor ! (id2, GlobalRolloutCreated(10))
       actor ! (id2, GlobalRolloutUpdated(20))
 

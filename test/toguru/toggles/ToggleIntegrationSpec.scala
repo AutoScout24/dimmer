@@ -2,14 +2,13 @@ package toguru.toggles
 
 import akka.actor.ActorRef
 import akka.pattern.ask
-import akka.util.Timeout
 import toguru.PostgresSetup
 import toguru.app.Config
 import play.api.test.Helpers._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.{OneServerPerSuite, PlaySpec}
 import play.api.inject.{BindingKey, QualifierInstance}
-import play.api.libs.json.{JsArray, Json}
+import play.api.libs.json.{JsArray, JsObject, Json}
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.Results
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits}
@@ -39,7 +38,8 @@ class ToggleIntegrationSpec extends PlaySpec
     val name = "toggle 1"
     val toggleId = ToggleActor.toId(name)
     val toggleEndpointURL     = s"http://localhost:$port/toggle"
-    val globalRolloutEndpoint = s"http://localhost:$port/toggle/$toggleId/globalrollout"
+    val globalRolloutEndpoint = s"$toggleEndpointURL/$toggleId/globalrollout"
+    val toggleUpdateEndpoint  = s"$toggleEndpointURL/$toggleId"
     val toggleStateEndpoint   = s"http://localhost:$port/togglestate"
     val auditLogEndpoint      = s"http://localhost:$port/auditlog"
 
@@ -142,6 +142,14 @@ class ToggleIntegrationSpec extends PlaySpec
       val json = Json.parse(response.body)
       json mustBe a[JsArray]
       json.asInstanceOf[JsArray].value.size == 5
+    }
+
+    "allow to update toggle" in {
+      // execute
+      val response = await(wsClient.url(toggleUpdateEndpoint).put(toggleAsString("toggle 3")))
+
+      // verify
+      verifyResponseIsOk(response)
     }
   }
 

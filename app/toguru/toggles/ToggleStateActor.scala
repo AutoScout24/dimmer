@@ -47,6 +47,7 @@ class ToggleStateActor(startHook: (ActorContext, ActorRef) => Unit, var toggles:
 
   def handleEvent(id: String, event: ToggleEvent) = event match {
     case ToggleCreated(_, _, tags, _) => toggles = toggles.updated(id, ToggleState(id, tags, None))
+    case ToggleUpdated(_, _, tags, _) => updateToggle(id, _.copy(tags = tags))
     case GlobalRolloutCreated(p, _)   => updateToggle(id, _.copy(rolloutPercentage = Some(p)))
     case GlobalRolloutUpdated(p, _)   => updateToggle(id, _.copy(rolloutPercentage = Some(p)))
     case GlobalRolloutDeleted(_)      => updateToggle(id, _.copy(rolloutPercentage = None))

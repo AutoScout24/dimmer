@@ -80,6 +80,21 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
     }
   }
 
+  "update method" should {
+    "return ok when given an update command" in {
+      val controller = createController(Props(new Actor {
+        def receive = { case _ : UpdateToggleCommand => sender ! UpdateSucceeded }
+      }))
+      val request = FakeRequest().withBody(UpdateToggleCommand(Some("toggle"), Some("description"), None))
+
+      val result: Future[Result] = controller.update("toggle").apply(request)
+
+      val bodyJson: JsValue = contentAsJson(result)
+      status(result) mustBe 200
+      (bodyJson \ "status").asOpt[String] mustBe Some("Ok")
+    }
+  }
+
   "set global rollout condition" should {
     "return ok when given a set command" in {
       val controller = createController(Props(new Actor {

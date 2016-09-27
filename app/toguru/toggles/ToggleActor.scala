@@ -19,6 +19,10 @@ object ToggleActor {
 
   case class ToggleAlreadyExists(id: String)
 
+  case class UpdateToggleCommand(name: Option[String], description: Option[String], tags: Option[Map[String, String]])
+
+  case object UpdateSucceeded
+
   case object GetToggle
 
   case class SetGlobalRolloutCommand(percentage: Int)
@@ -51,6 +55,9 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
     case ToggleCreated(name, description, tags, _) =>
       maybeToggle = Some(Toggle(toggleId, name, description, tags))
 
+    case ToggleUpdated(name, description, tags, _) =>
+      maybeToggle = maybeToggle.map(_.copy(name = name, description = description, tags = tags))
+
     case GlobalRolloutCreated(p, _) =>
       maybeToggle = maybeToggle.map(_.copy(rolloutPercentage = Some(p)))
 
@@ -77,6 +84,18 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
             receiveRecover(created)
             sender ! CreateSucceeded(toggleId)
           }
+      }
+
+    case UpdateToggleCommand(name, description, tags) =>
+      maybeToggle match {
+        case Some(t) =>
+          val updated = ToggleUpdated(
+            name.getOrElse(t.name), description.getOrElse(t.description), tags.getOrElse(t.tags), meta)
+          persist(updated) { updated =>
+            receiveRecover(updated)
+            sender ! UpdateSucceeded
+          }
+        case None    => sender ! ToggleDoesNotExist(toggleId)
       }
   }
 
