@@ -13,6 +13,8 @@ POST       /toggle                     @toguru.toggles.ToggleController.create
 
 PUT        /toggle/:id                 @toguru.toggles.ToggleController.update(id: String)
 
+DELETE     /toggle/:id                 @toguru.toggles.ToggleController.delete(id: String)
+
 PUT        /toggle/:id/globalrollout   @toguru.toggles.ToggleController.setGlobalRollout(id: String)
 
 DELETE     /toggle/:id/globalrollout   @toguru.toggles.ToggleController.deleteGlobalRollout(id: String)

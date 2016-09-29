@@ -21,7 +21,9 @@ object ToggleActor {
 
   case class UpdateToggleCommand(name: Option[String], description: Option[String], tags: Option[Map[String, String]])
 
-  case object UpdateSucceeded
+  case class DeleteToggleCommand(delete: Option[Boolean])
+
+  case object UnconfirmedDelete
 
   case object GetToggle
 
@@ -58,6 +60,9 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
     case ToggleUpdated(name, description, tags, _) =>
       maybeToggle = maybeToggle.map(_.copy(name = name, description = description, tags = tags))
 
+    case ToggleDeleted(_) =>
+      maybeToggle = None
+
     case GlobalRolloutCreated(p, _) =>
       maybeToggle = maybeToggle.map(_.copy(rolloutPercentage = Some(p)))
 
@@ -68,7 +73,8 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
       maybeToggle = maybeToggle.map(_.copy(rolloutPercentage = None))
   }
 
-  override def receiveCommand = handleToggleCommands.orElse(withExistingToggle(t => handleGlobalRolloutCommands(t)))
+  override def receiveCommand = handleToggleCommands.orElse(
+    withExistingToggle(t => handleToggleModificationCommands(t).orElse(handleGlobalRolloutCommands(t))))
 
   def handleToggleCommands: Receive = {
     case Shutdown => context.stop(self)
@@ -85,18 +91,24 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
             sender ! CreateSucceeded(toggleId)
           }
       }
+  }
 
+  def handleToggleModificationCommands(t: Toggle): Receive = {
     case UpdateToggleCommand(name, description, tags) =>
-      maybeToggle match {
-        case Some(t) =>
-          val updated = ToggleUpdated(
-            name.getOrElse(t.name), description.getOrElse(t.description), tags.getOrElse(t.tags), meta)
-          persist(updated) { updated =>
-            receiveRecover(updated)
-            sender ! UpdateSucceeded
-          }
-        case None    => sender ! ToggleDoesNotExist(toggleId)
+      val updated = ToggleUpdated(
+        name.getOrElse(t.name), description.getOrElse(t.description), tags.getOrElse(t.tags), meta)
+      persist(updated) { updated =>
+        receiveRecover(updated)
+        sender ! Success
       }
+
+    case DeleteToggleCommand(Some(true)) =>
+      persist(ToggleDeleted(meta)) { deleted =>
+        receiveRecover(deleted)
+        sender ! Success
+    }
+
+    case DeleteToggleCommand(_) => sender ! UnconfirmedDelete
   }
 
   def handleGlobalRolloutCommands(toggle: Toggle): Receive =  {

@@ -25,6 +25,11 @@ message ToggleUpdated {
     Metadata meta = 4;
 }
 
+message ToggleDeleted {
+    option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
+    Metadata meta = 4;
+}
+
 message GlobalRolloutCreated {
     option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
     int32 percentage = 1;

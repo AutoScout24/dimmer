@@ -27,6 +27,7 @@ class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: C
   }
   val createdWrites = Json.writes[ToggleCreated]
   val updatedWrites = Json.writes[ToggleUpdated]
+  val deletedWrites = Json.writes[ToggleDeleted]
   val rolloutCreatedWrites = Json.writes[GlobalRolloutCreated]
   val rolloutUpdatedWrites = Json.writes[GlobalRolloutUpdated]
   val rolloutDeletedWrites = Json.writes[GlobalRolloutDeleted]
@@ -40,6 +41,7 @@ class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: C
       o._2 match {
         case e : ToggleCreated        => fields(o._1, "toggle created")  ++ createdWrites.writes(e)
         case e : ToggleUpdated        => fields(o._1, "toggle updated")  ++ updatedWrites.writes(e)
+        case e : ToggleDeleted        => fields(o._1, "toggle deleted")  ++ deletedWrites.writes(e)
         case e : GlobalRolloutCreated => fields(o._1, "rollout created") ++ rolloutCreatedWrites.writes(e)
         case e : GlobalRolloutUpdated => fields(o._1, "rollout updated") ++ rolloutUpdatedWrites.writes(e)
         case e : GlobalRolloutDeleted => fields(o._1, "rollout deleted") ++ rolloutDeletedWrites.writes(e)

@@ -1,5 +1,6 @@
 package toguru.toggles
 
+import play.api.Logger
 import play.api.http.{HeaderNames, MimeTypes}
 import play.api.libs.json._
 import play.api.mvc._
@@ -21,20 +22,20 @@ trait JsonResponses extends ResultPublishing {
       import play.api.libs.iteratee.Execution.Implicits.trampoline
       BodyParsers.parse.tolerantJson(request).mapFuture {
         case Left(simpleResult) =>
-          Future.successful(Left(simpleResult))
+          Future.successful(Left(badJsonResponse(Json.toJson(sample))))
         case Right(jsValue) =>
           jsValue.validate(reader).map { a =>
             Future.successful(Right(a))
           }.recoverTotal { jsError =>
-            Future.successful(Left(badJsonResponse(Json.toJson(sample), jsError)))
+            Future.successful(Left(badJsonResponse(Json.toJson(sample), Some(jsError))))
           }
       }
     }
 
-  def badJsonResponse[A](sample: JsValue, jsError: JsError): Result = {
-    val errorsObject = JsObject(jsError.errors.map {
+  def badJsonResponse[A](sample: JsValue, jsError: Option[JsError] = None): Result = {
+    val errorsObject = JsObject(jsError.to[List].flatMap(_.errors.map {
       case (path, errors) => path.toString() -> JsArray(errors.map(e => JsString(e.message)))
-    })
+    }))
 
     BadRequest(
       errorJson(

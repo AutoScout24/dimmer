@@ -29,6 +29,7 @@ class ToggleStateActorSpec extends ActorSpec {
 
       val id1 = "toggle-1"
       val id2 = "toggle-2"
+      val id3 = "toggle-3"
 
       actor ! (id1, ToggleCreated("name", "description", Map("team" -> "Toguru team")))
       actor ! (id1, GlobalRolloutCreated(10))
@@ -39,6 +40,8 @@ class ToggleStateActorSpec extends ActorSpec {
       actor ! (id2, GlobalRolloutCreated(10))
       actor ! (id2, GlobalRolloutUpdated(20))
 
+      actor ! (id3, ToggleCreated("name", "description", Map.empty))
+      actor ! (id3, ToggleDeleted())
 
       val response = await(actor ? GetState)
 

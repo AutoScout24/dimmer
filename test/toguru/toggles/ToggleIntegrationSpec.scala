@@ -39,7 +39,7 @@ class ToggleIntegrationSpec extends PlaySpec
     val toggleId = ToggleActor.toId(name)
     val toggleEndpointURL     = s"http://localhost:$port/toggle"
     val globalRolloutEndpoint = s"$toggleEndpointURL/$toggleId/globalrollout"
-    val toggleUpdateEndpoint  = s"$toggleEndpointURL/$toggleId"
+    val toggleEndpoint  = s"$toggleEndpointURL/$toggleId"
     val toggleStateEndpoint   = s"http://localhost:$port/togglestate"
     val auditLogEndpoint      = s"http://localhost:$port/auditlog"
 
@@ -124,13 +124,29 @@ class ToggleIntegrationSpec extends PlaySpec
       json.asInstanceOf[JsArray].value.size == 2
     }
 
-    "return current audit log" in {
+    "allow to update toggle" in {
+      // execute
+      val response = await(wsClient.url(toggleEndpoint).put(toggleAsString("toggle 3")))
 
+      // verify
+      verifyResponseIsOk(response)
+    }
+
+    "allow to delete a toggle" in {
+      // execute
+      val response = await(wsClient.url(toggleEndpoint).withBody("""{"delete": true}""").delete())
+
+      // verify
+      verifyResponseIsOk(response)
+    }
+
+    "return current audit log" in {
+      val auditLogSize = 7
       val actor = app.injector.instanceOf[ActorRef](namedKey(classOf[ActorRef], "audit-log"))
 
       waitFor(30) {
         val log = await((actor ? GetLog).mapTo[Seq[_]])
-        log.size == 5
+        log.size == auditLogSize
       }
 
       // execute
@@ -141,15 +157,7 @@ class ToggleIntegrationSpec extends PlaySpec
 
       val json = Json.parse(response.body)
       json mustBe a[JsArray]
-      json.asInstanceOf[JsArray].value.size == 5
-    }
-
-    "allow to update toggle" in {
-      // execute
-      val response = await(wsClient.url(toggleUpdateEndpoint).put(toggleAsString("toggle 3")))
-
-      // verify
-      verifyResponseIsOk(response)
+      json.asInstanceOf[JsArray].value.size == auditLogSize
     }
   }
 

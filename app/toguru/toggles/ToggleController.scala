@@ -18,10 +18,12 @@ object ToggleController extends Results with JsonResponses with ToggleActorRespo
   implicit val toggleFormat = Json.format[Toggle]
   implicit val createToggleFormat = Json.format[CreateToggleCommand]
   implicit val updateToggleFormat = Json.format[UpdateToggleCommand]
+  implicit val deleteToggleFormat = Json.format[DeleteToggleCommand]
   implicit val globalRolloutFormat = Json.format[SetGlobalRolloutCommand]
 
   val sampleCreateToggle = CreateToggleCommand("toggle name", "toggle description", Map("team" -> "Toguru team"))
   val sampleUpdateToggle = UpdateToggleCommand(None, Some("new toggle description"), Some(Map("team" -> "Toguru team")))
+  val sampleDeleteToggle = DeleteToggleCommand(delete = Some(true))
   val sampleSetGlobalRollout = SetGlobalRolloutCommand(42)
 }
 
@@ -84,10 +86,30 @@ class ToggleController(config: Config, provider: ToggleActorProvider) extends Co
     withActor(toggleId) { toggleActor =>
       (toggleActor ? command).map(
         both(whenToggleExists, whenPersisted) {
-          case UpdateSucceeded =>
+          case Success =>
             publishSuccess(actionId, toggleId)
             Ok(Json.obj("status" -> "Ok"))
       })
+    }
+  }
+
+  def delete(toggleId: String) = ActionWithJson.async(json(sampleDeleteToggle)) { request =>
+    import play.api.libs.concurrent.Execution.Implicits._
+    val command  = request.body
+    implicit val actionId = "delete-toggle"
+
+    withActor(toggleId) { toggleActor =>
+      (toggleActor ? command).map(
+        both(whenToggleExists, whenPersisted) {
+          case Success =>
+            publishSuccess(actionId, toggleId)
+            Ok(Json.obj("status" -> "Ok"))
+
+          case UnconfirmedDelete =>
+            publisher.event(s"$actionId-unconfirmed", "toggleId" -> toggleId)
+            BadRequest(errorJson("Bad request",
+              "The delete property was set to false", "Set the delete property to true to delete this toggle"))
+        })
     }
   }
 
