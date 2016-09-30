@@ -25,7 +25,7 @@ env:
 script:
   - docker version
   - docker info
-  - ./activator coverage test coverageReport coverageOff docker:publishLocal
+  - ./activator coverage test it:test coverageReport coverageOff docker:publishLocal
 
 after_success:
   - if [ "$TRAVIS_BRANCH" == "master" -a "$TRAVIS_PULL_REQUEST" = "false" -a "$TRAVIS_REPO_SLUG" = "AutoScout24/toguru" ]; then

@@ -1,11 +1,11 @@
-package toguru
+package toguru.helpers
 
 import java.io.IOException
 import java.sql.{DriverManager, SQLException}
 
-import scala.concurrent.duration._
 import com.typesafe.config.Config
 
+import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.sys.process.{Process, ProcessIO}
 import scala.util.Random
@@ -89,8 +89,8 @@ trait PostgresSetup {
   }
 
   def stopPostgres() = {
-    import scala.concurrent.duration._
     import scala.concurrent.ExecutionContext.Implicits.global
+    import scala.concurrent.duration._
     for (postgresName <- maybePostgresName) {
       val discardOutput = new ProcessIO(_.close, _.close, _.close)
       val kill = Process(s"docker kill $postgresName").run(discardOutput)

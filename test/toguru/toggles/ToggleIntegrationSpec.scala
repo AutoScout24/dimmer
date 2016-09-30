@@ -2,22 +2,21 @@ package toguru.toggles
 
 import akka.actor.ActorRef
 import akka.pattern.ask
-import toguru.PostgresSetup
-import toguru.app.Config
-import play.api.test.Helpers._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.{OneServerPerSuite, PlaySpec}
 import play.api.inject.{BindingKey, QualifierInstance}
-import play.api.libs.json.{JsArray, JsObject, Json}
+import play.api.libs.json.{JsArray, Json}
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.Results
+import play.api.test.Helpers._
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits}
 import play.inject.NamedImpl
+import toguru.app.Config
+import toguru.helpers.PostgresSetup
 import toguru.toggles.AuditLogActor.GetLog
 import toguru.toggles.ToggleStateActor.GetState
 
-import scala.concurrent.duration._
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{FiniteDuration, _}
 
 
 class ToggleIntegrationSpec extends PlaySpec
