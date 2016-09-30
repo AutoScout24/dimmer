@@ -10,7 +10,6 @@ import scala.concurrent.{Await, Future}
 import scala.sys.process._
 import scala.util.Random
 
-
 trait PostgresSetup {
 
   def log(message: String): Unit

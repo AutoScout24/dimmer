@@ -33,6 +33,17 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
     new ToggleController(config, factory)
   }
 
+  def verifyStatus(result: Future[Result], statusCode: Int, statusString: String): JsValue =
+    verifyStatus(result, statusCode, Some(statusString))
+
+  def verifyStatus(result: Future[Result], statusCode: Int, statusString: Option[String]): JsValue = {
+    val bodyJson: JsValue = contentAsJson(result)
+    status(result) mustBe statusCode
+    (bodyJson \ "status").asOpt[String] mustBe statusString
+    bodyJson
+  }
+
+
   "get method" should {
     "return toggle for an existing toggle" in {
       val props = Props(new Actor {
@@ -44,8 +55,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
 
       val result: Future[Result] = controller.get("toggle-id")().apply(request)
 
-      val bodyJson: JsValue = contentAsJson(result)
-      status(result) mustBe 200
+      val bodyJson: JsValue = verifyStatus(result, 200, None)
       (bodyJson \ "name").asOpt[String] mustBe Some("toggle")
       (bodyJson \ "id").asOpt[String] mustBe Some("toggle-id")
     }
@@ -58,9 +68,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
 
       val result: Future[Result] = controller.get("toggle-id")().apply(request)
 
-      val bodyJson: JsValue = contentAsJson(result)
-      status(result) mustBe 404
-      (bodyJson \ "status").asOpt[String] mustBe Some("Not found")
+      verifyStatus(result, 404, "Not found")
     }
   }
 
@@ -73,9 +81,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
 
       val result: Future[Result] = controller.create().apply(request)
 
-      val bodyJson: JsValue = contentAsJson(result)
-      status(result) mustBe 200
-      (bodyJson \ "status").asOpt[String] mustBe Some("Ok")
+      val bodyJson: JsValue = verifyStatus(result, 200, "Ok")
       (bodyJson \ "id").asOpt[String] mustBe Some("toggle-id")
     }
   }
@@ -89,9 +95,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
 
       val result: Future[Result] = controller.update("toggle").apply(request)
 
-      val bodyJson: JsValue = contentAsJson(result)
-      status(result) mustBe 200
-      (bodyJson \ "status").asOpt[String] mustBe Some("Ok")
+      verifyStatus(result, 200, "Ok")
     }
   }
 
@@ -103,9 +107,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
 
       val result: Future[Result] = controller.delete("toggle").apply(FakeRequest())
 
-      val bodyJson: JsValue = contentAsJson(result)
-      status(result) mustBe 200
-      (bodyJson \ "status").asOpt[String] mustBe Some("Ok")
+      verifyStatus(result, 200, "Ok")
     }
 
     "return not found when toggles does not exist" in {
@@ -115,9 +117,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
 
       val result: Future[Result] = controller.delete("toggle").apply(FakeRequest())
 
-      val bodyJson: JsValue = contentAsJson(result)
-      status(result) mustBe 404
-      (bodyJson \ "status").asOpt[String] mustBe Some("Not found")
+      verifyStatus(result, 404, "Not found")
     }
   }
 
@@ -130,9 +130,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
 
       val result: Future[Result] = controller.setGlobalRollout("toggle-id").apply(request)
 
-      val bodyJson: JsValue = contentAsJson(result)
-      status(result) mustBe 200
-      (bodyJson \ "status").asOpt[String] mustBe Some("Ok")
+      verifyStatus(result, 200, "Ok")
     }
 
     "returns not found when toggle does not exist" in {
@@ -143,7 +141,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
 
       val result: Future[Result] = controller.setGlobalRollout("toggle-id").apply(request)
 
-      status(result) mustBe 404
+      verifyStatus(result, 404, "Not found")
     }
   }
 
@@ -157,9 +155,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
 
       val result: Future[Result] = controller.deleteGlobalRollout("toggle-id")().apply(request)
 
-      val bodyJson: JsValue = contentAsJson(result)
-      status(result) mustBe 200
-      (bodyJson \ "status").asOpt[String] mustBe Some("Ok")
+      verifyStatus(result, 200, "Ok")
     }
   }
 
@@ -176,9 +172,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar {
         (actor ? GetToggle)(timeout).map(_ => Ok("Ok"))
       }
 
-      val bodyJson: JsValue = contentAsJson(result)
-      status(result) mustBe 500
-      (bodyJson \ "status").asOpt[String] mustBe Some("Internal server error")
+      val bodyJson: JsValue = verifyStatus(result, 500, "Internal server error")
       (bodyJson \ "reason").asOpt[String] mustBe Some("An internal error occurred")
     }
   }
