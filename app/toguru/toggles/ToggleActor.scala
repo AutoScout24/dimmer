@@ -21,9 +21,7 @@ object ToggleActor {
 
   case class UpdateToggleCommand(name: Option[String], description: Option[String], tags: Option[Map[String, String]])
 
-  case class DeleteToggleCommand(delete: Option[Boolean])
-
-  case object UnconfirmedDelete
+  case object DeleteToggleCommand
 
   case object GetToggle
 
@@ -102,13 +100,11 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
         sender ! Success
       }
 
-    case DeleteToggleCommand(Some(true)) =>
+    case DeleteToggleCommand =>
       persist(ToggleDeleted(meta)) { deleted =>
         receiveRecover(deleted)
         sender ! Success
     }
-
-    case DeleteToggleCommand(_) => sender ! UnconfirmedDelete
   }
 
   def handleGlobalRolloutCommands(toggle: Toggle): Receive =  {

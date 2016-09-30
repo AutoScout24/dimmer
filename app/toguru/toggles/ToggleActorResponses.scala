@@ -13,7 +13,7 @@ trait ToggleActorResponses extends Results with JsonResponses {
   def whenToggleExists(handler: ResponseHandler)(implicit actionId: String): ResponseHandler = {
     case ToggleDoesNotExist(id) =>
       publishFailure(actionId, id, "reason" -> "toggle does not exist")
-      NotFound(errorJson("Not Found", s"A toggle with id $id does not exist", "Provide an existing toggle id"))
+      NotFound(errorJson("Not found", s"A toggle with id $id does not exist", "Provide an existing toggle id"))
 
     case r => handler(r)
   }
@@ -21,7 +21,7 @@ trait ToggleActorResponses extends Results with JsonResponses {
   def whenPersisted(handler: ResponseHandler)(implicit actionId: String): ResponseHandler = {
     case PersistFailed(toggleId, cause) =>
       publishFailure(actionId, cause, "toggleId" -> toggleId)
-      InternalServerError(errorJson("Internal Server Error", cause.getMessage))
+      InternalServerError(errorJson("Internal server error", cause.getMessage))
 
     case r => handler(r)
   }

@@ -2,7 +2,7 @@ package toguru.toggles
 
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import akka.persistence.query.{EventEnvelope, PersistenceQuery}
+import akka.persistence.query.PersistenceQuery
 import toguru.toggles.ToggleActor._
 import toguru.events.toggles._
 
@@ -15,7 +15,6 @@ class ToggleActorSpec extends ActorSpec {
     val toggle = Toggle(toggleId, "name","description")
     val createCommand = CreateToggleCommand(toggle.name, toggle.description, toggle.tags)
     val updateCommand = UpdateToggleCommand(None, Some("new description"), Some(Map("services" -> "toguru")))
-    val deleteCommand = DeleteToggleCommand(Some(true))
     val setGlobalRolloutCommand = SetGlobalRolloutCommand(42)
 
     def createActor(toggle: Option[Toggle] = None) = system.actorOf(Props(new ToggleActor(toggleId, toggle)))
@@ -54,7 +53,7 @@ class ToggleActorSpec extends ActorSpec {
 
     "delete toggle when toggle exists and command confirms delete" in new ToggleActorSetup {
       val actor = createActor(Some(toggle))
-      val response = await(actor ? deleteCommand)
+      val response = await(actor ? DeleteToggleCommand)
       response mustBe Success
 
       await(actor ? GetToggle) mustBe None
@@ -62,19 +61,7 @@ class ToggleActorSpec extends ActorSpec {
 
     "reject delete when toggle does not exist" in new ToggleActorSetup {
       val actor = createActor()
-      val response = await(actor ? deleteCommand)
-      response mustBe ToggleDoesNotExist(toggleId)
-    }
-
-    "reject delete when command does not confirm delete" in new ToggleActorSetup {
-      val actor = createActor(Some(toggle))
-      val response = await(actor ? DeleteToggleCommand(None))
-      response mustBe UnconfirmedDelete
-    }
-
-    "reply that it does not exist when command does not confirm delete but toggle does not exist anyway" in new ToggleActorSetup {
-      val actor = createActor()
-      val response = await(actor ? DeleteToggleCommand(None))
+      val response = await(actor ? DeleteToggleCommand)
       response mustBe ToggleDoesNotExist(toggleId)
     }
 
