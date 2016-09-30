@@ -3,8 +3,10 @@ package toguru.toggles
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.persistence.query.PersistenceQuery
-import toguru.toggles.ToggleActor._
+import akka.persistence.query.scaladsl._
+import akka.stream.scaladsl._
 import toguru.events.toggles._
+import toguru.toggles.ToggleActor._
 
 import scala.collection.immutable.Seq
 
@@ -107,8 +109,6 @@ class ToggleActorSpec extends ActorSpec {
         override def time = 0
       }))
 
-      import akka.persistence.query.scaladsl._
-      import akka.stream.scaladsl._
       lazy val readJournal = PersistenceQuery(system).readJournalFor("inmemory-read-journal")
         .asInstanceOf[ReadJournal with CurrentEventsByPersistenceIdQuery]
 

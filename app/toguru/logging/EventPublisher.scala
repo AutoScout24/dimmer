@@ -4,6 +4,8 @@ import net.logstash.logback.marker.LogstashMarker
 import net.logstash.logback.marker.Markers.appendEntries
 import org.slf4j.{Logger, LoggerFactory}
 
+import scala.collection.JavaConverters._
+
 trait Event {
 
   def eventName: String
@@ -17,8 +19,6 @@ trait EventPublishing {
 
 object EventPublisher {
   val eventLogger: Logger = LoggerFactory.getLogger("event-logger")
-
-  import collection.JavaConverters._
 
   def event(name: String, fields: (String, Any)*): Unit = eventLogger.info(markers(name, fields), "")
 

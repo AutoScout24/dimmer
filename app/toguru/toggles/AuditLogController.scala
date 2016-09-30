@@ -37,15 +37,18 @@ class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: C
     def fields(id: String, event: String) =
       Json.obj("id" -> id, "event" -> event)
 
-    override def writes(o: (String, ToggleEvent)) =
-      o._2 match {
-        case e : ToggleCreated        => fields(o._1, "toggle created")  ++ createdWrites.writes(e)
-        case e : ToggleUpdated        => fields(o._1, "toggle updated")  ++ updatedWrites.writes(e)
-        case e : ToggleDeleted        => fields(o._1, "toggle deleted")  ++ deletedWrites.writes(e)
-        case e : GlobalRolloutCreated => fields(o._1, "rollout created") ++ rolloutCreatedWrites.writes(e)
-        case e : GlobalRolloutUpdated => fields(o._1, "rollout updated") ++ rolloutUpdatedWrites.writes(e)
-        case e : GlobalRolloutDeleted => fields(o._1, "rollout deleted") ++ rolloutDeletedWrites.writes(e)
+    override def writes(o: (String, ToggleEvent)) = {
+      val id = o._1
+      val event = o._2
+      event match {
+        case e : ToggleCreated        => fields(id, "toggle created")  ++ createdWrites.writes(e)
+        case e : ToggleUpdated        => fields(id, "toggle updated")  ++ updatedWrites.writes(e)
+        case e : ToggleDeleted        => fields(id, "toggle deleted")  ++ deletedWrites.writes(e)
+        case e : GlobalRolloutCreated => fields(id, "rollout created") ++ rolloutCreatedWrites.writes(e)
+        case e : GlobalRolloutUpdated => fields(id, "rollout updated") ++ rolloutUpdatedWrites.writes(e)
+        case e : GlobalRolloutDeleted => fields(id, "rollout deleted") ++ rolloutDeletedWrites.writes(e)
       }
+    }
   }
 
   def get = ActionWithJson.async { request =>

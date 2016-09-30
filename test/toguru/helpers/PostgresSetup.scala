@@ -7,8 +7,9 @@ import com.typesafe.config.Config
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
-import scala.sys.process.{Process, ProcessIO}
+import scala.sys.process._
 import scala.util.Random
+
 
 trait PostgresSetup {
 
@@ -47,7 +48,6 @@ trait PostgresSetup {
   var maybePostgresName:Option[String] = None
 
   def startPostgres() = {
-    import scala.sys.process._
 
     def run(prefix: String, command: String): Int = {
       val logger = ProcessLogger(line => log(s"$prefix: $line"), line => log(s"$prefix: $line"))
@@ -90,7 +90,6 @@ trait PostgresSetup {
 
   def stopPostgres() = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    import scala.concurrent.duration._
     for (postgresName <- maybePostgresName) {
       val discardOutput = new ProcessIO(_.close, _.close, _.close)
       val kill = Process(s"docker kill $postgresName").run(discardOutput)

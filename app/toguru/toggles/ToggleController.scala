@@ -5,11 +5,11 @@ import javax.inject.Inject
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.util.Timeout
-import toguru.app.Config
 import play.api.libs.json._
 import play.api.mvc._
-import ToggleActor._
+import toguru.app.Config
 import toguru.logging.EventPublishing
+import toguru.toggles.ToggleActor._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -26,7 +26,6 @@ object ToggleController extends Results with JsonResponses with ToggleActorRespo
 }
 
 class ToggleController(config: Config, provider: ToggleActorProvider) extends Controller with EventPublishing {
-
   import ToggleController._
 
   implicit val timeout = Timeout(config.actorTimeout)
