@@ -13,12 +13,12 @@ import toguru.app.Config
 import toguru.logging.EventPublishing
 import toguru.toggles.ToggleStateActor.GetState
 
-class ToggleStateController @Inject()(@Named("toggle-state") actor: ActorRef, config: Config, stateRequests: Counter)
+class ToggleStateController(actor: ActorRef, config: Config, stateRequests: Counter)
   extends Controller with EventPublishing with JsonResponses {
 
+  @Inject()
   def this(@Named("toggle-state") actor: ActorRef, config: Config, metrics: Metrics) =
     this(actor, config, metrics.defaultRegistry.counter("state-requests"))
-
 
   implicit val toggleStateWriter = Json.writes[ToggleState]
 
