@@ -1,10 +1,11 @@
 package toguru.toggles
 
 import akka.actor.{Actor, ActorSystem, Props}
+import com.codahale.metrics.Counter
 import com.typesafe.config.{Config => TypesafeConfig}
 import org.scalatest.mock.MockitoSugar
 import org.scalatestplus.play.PlaySpec
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import toguru.app.Config
@@ -23,8 +24,9 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
 
     val system = ActorSystem()
     val actor = system.actorOf(props)
+    val counter = mock[Counter]
 
-    new ToggleStateController(actor, config)
+    new ToggleStateController(actor, config, counter)
   }
 
   "get method" should {
