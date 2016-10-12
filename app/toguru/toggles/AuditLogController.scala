@@ -14,7 +14,11 @@ import toguru.events.toggles._
 import toguru.logging.EventPublishing
 import toguru.toggles.AuditLogActor.GetLog
 
-class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: Config) extends Controller with EventPublishing with JsonResponses {
+class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: Config) extends Controller with EventPublishing with JsonResponses with Authentication {
+
+  override def authConfig = config.auth
+
+  val AuthenticatedWithJson = Authenticated andThen OnlyJson
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
 
@@ -51,7 +55,7 @@ class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: C
     }
   }
 
-  def get = ActionWithJson.async { request =>
+  def get = AuthenticatedWithJson.async { request =>
     import play.api.libs.concurrent.Execution.Implicits._
     implicit val timeout = Timeout(config.actorTimeout)
 

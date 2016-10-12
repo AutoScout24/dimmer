@@ -20,6 +20,7 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
     val config = new Config {
       override val actorTimeout = 100.millis
       override val typesafeConfig = mock[TypesafeConfig]
+      override def auth = Authentication.Config(Seq.empty, disabled = false)
     }
 
     val system = ActorSystem()

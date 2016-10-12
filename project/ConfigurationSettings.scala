@@ -22,7 +22,7 @@ object ConfigurationSettings {
   )
 
   val Run  = Seq("-Dconfig.resource=application.conf", "-Dlogger.resource=logger-config.xml")      ++ JmxOptions
-  val Dev  = Seq("-Dconfig.resource=application.conf", "-Dlogger.resource=dev-logger-config.xml")  ++ JmxOptions
+  val Dev  = Seq("-Dconfig.resource=dev.conf",         "-Dlogger.resource=dev-logger-config.xml")  ++ JmxOptions
   val Test = Seq("-Dconfig.resource=test.conf",        "-Dlogger.resource=test-logger-config.xml") ++ JmxOptions
 
 }

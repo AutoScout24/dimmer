@@ -6,11 +6,12 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.{OneServerPerSuite, PlaySpec}
 import play.api.inject.{BindingKey, QualifierInstance}
 import play.api.libs.json.{JsArray, Json}
-import play.api.libs.ws.{WSClient, WSResponse}
+import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 import play.api.mvc.Results
 import play.api.test.Helpers._
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits}
 import play.inject.NamedImpl
+import play.mvc.Http.HeaderNames
 import toguru.app.Config
 import toguru.helpers.PostgresSetup
 import toguru.toggles.AuditLogActor.GetLog
@@ -38,25 +39,44 @@ class ToggleIntegrationSpec extends PlaySpec
     val toggleId = ToggleActor.toId(name)
     val toggleEndpointURL     = s"http://localhost:$port/toggle"
     val globalRolloutEndpoint = s"$toggleEndpointURL/$toggleId/globalrollout"
-    val toggleEndpoint  = s"$toggleEndpointURL/$toggleId"
+    val toggleEndpoint        = s"$toggleEndpointURL/$toggleId"
     val toggleStateEndpoint   = s"http://localhost:$port/togglestate"
     val auditLogEndpoint      = s"http://localhost:$port/auditlog"
 
     val wsClient = app.injector.instanceOf[WSClient]
 
+    val validTestApiKeyHeader = HeaderNames.AUTHORIZATION -> s"${Authentication.ApiKeyPrefix} test-api-key"
+
+    def requestWithApiKeyHeader(url: String): WSRequest =
+      wsClient.url(url).withHeaders(validTestApiKeyHeader)
+
     def fetchToggle(): Toggle = {
-      val getResponse = await(wsClient.url(s"$toggleEndpointURL/$toggleId").get)
+      val getResponse = await(requestWithApiKeyHeader(s"$toggleEndpointURL/$toggleId").get)
       Json.parse(getResponse.body).as(ToggleController.toggleFormat)
+    }
+
+    "deny access if no api key given" in {
+      // prepare
+      waitForPostgres()
+      val body = toggleAsString(name)
+
+      // execute
+      val createResponse = await(wsClient.url(toggleEndpointURL).post(body))
+
+      // verify
+      createResponse.status mustBe UNAUTHORIZED
+      val json = Json.parse(createResponse.body)
+      (json \ "status").asOpt[String] mustBe Some("Unauthorized")
     }
 
     "create a toggle" in {
       // prepare
       waitForPostgres()
-
       val body = toggleAsString(name)
+
       // execute
-      val createResponse = await(wsClient.url(toggleEndpointURL).post(body))
-      val getResponse = await(wsClient.url(s"$toggleEndpointURL/$toggleId").get)
+      val createResponse = await(requestWithApiKeyHeader(toggleEndpointURL).post(body))
+      val getResponse = await(requestWithApiKeyHeader(s"$toggleEndpointURL/$toggleId").get)
 
       // verify
       verifyResponseIsOk(createResponse)
@@ -70,7 +90,7 @@ class ToggleIntegrationSpec extends PlaySpec
       val body = """{"percentage": 55}"""
 
       // execute
-      val createResponse = await(wsClient.url(globalRolloutEndpoint).put(body))
+      val createResponse = await(requestWithApiKeyHeader(globalRolloutEndpoint).put(body))
 
       // verify
       verifyResponseIsOk(createResponse)
@@ -83,7 +103,7 @@ class ToggleIntegrationSpec extends PlaySpec
       val body = """{"percentage": 42}"""
 
       // execute
-      val updateResponse = await(wsClient.url(globalRolloutEndpoint).put(body))
+      val updateResponse = await(requestWithApiKeyHeader(globalRolloutEndpoint).put(body))
 
       // verify
       verifyResponseIsOk(updateResponse)
@@ -93,7 +113,7 @@ class ToggleIntegrationSpec extends PlaySpec
 
     "delete a global rollout condition" in {
       // execute
-      val createResponse = await(wsClient.url(globalRolloutEndpoint).delete())
+      val createResponse = await(requestWithApiKeyHeader(globalRolloutEndpoint).delete())
 
       // verify
       verifyResponseIsOk(createResponse)
@@ -103,7 +123,7 @@ class ToggleIntegrationSpec extends PlaySpec
 
     "return current toggle state" in {
       // prepare
-      await(wsClient.url(toggleEndpointURL).post(toggleAsString("toggle 2")))
+      await(requestWithApiKeyHeader(toggleEndpointURL).post(toggleAsString("toggle 2")))
 
       val actor = app.injector.instanceOf[ActorRef](namedKey(classOf[ActorRef], "toggle-state"))
 
@@ -113,7 +133,7 @@ class ToggleIntegrationSpec extends PlaySpec
       }
 
       // execute
-      val response = await(wsClient.url(toggleStateEndpoint).get())
+      val response = await(requestWithApiKeyHeader(toggleStateEndpoint).get())
 
       // verify
       response.status mustBe OK
@@ -125,7 +145,7 @@ class ToggleIntegrationSpec extends PlaySpec
 
     "allow to update toggle" in {
       // execute
-      val response = await(wsClient.url(toggleEndpoint).put(toggleAsString("toggle 3")))
+      val response = await(requestWithApiKeyHeader(toggleEndpoint).put(toggleAsString("toggle 3")))
 
       // verify
       verifyResponseIsOk(response)
@@ -133,7 +153,7 @@ class ToggleIntegrationSpec extends PlaySpec
 
     "allow to delete a toggle" in {
       // execute
-      val response = await(wsClient.url(toggleEndpoint).withBody("""{"delete": true}""").delete())
+      val response = await(requestWithApiKeyHeader(toggleEndpoint).withBody("""{"delete": true}""").delete())
 
       // verify
       verifyResponseIsOk(response)
@@ -149,7 +169,7 @@ class ToggleIntegrationSpec extends PlaySpec
       }
 
       // execute
-      val response = await(wsClient.url(auditLogEndpoint).get())
+      val response = await(requestWithApiKeyHeader(auditLogEndpoint).get())
 
       // verify
       response.status mustBe OK

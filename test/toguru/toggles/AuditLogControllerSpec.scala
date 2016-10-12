@@ -5,21 +5,22 @@ import com.typesafe.config.{Config => TypesafeConfig}
 import org.scalatest.mock.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.{JsArray, Json}
-import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import toguru.app.Config
 import toguru.events.toggles.{GlobalRolloutCreated, ToggleCreated}
+import toguru.helpers.AuthorizationHelpers
 import toguru.toggles.AuditLogActor.GetLog
 
 import scala.concurrent.duration._
 
 
-class AuditLogControllerSpec extends PlaySpec with MockitoSugar {
+class AuditLogControllerSpec extends PlaySpec with MockitoSugar with AuthorizationHelpers {
 
   def createController(props: Props): AuditLogController = {
     val config = new Config {
       override val actorTimeout = 100.millis
       override val typesafeConfig = mock[TypesafeConfig]
+      override def auth = authConfig
     }
 
     val system = ActorSystem()
@@ -43,11 +44,8 @@ class AuditLogControllerSpec extends PlaySpec with MockitoSugar {
         override def receive = { case GetLog => sender ! events }
       }))
 
-      val request = FakeRequest()
-
-
       // execute
-      val result = controller.get().apply(request)
+      val result = controller.get().apply(authorizedRequest)
 
       // verify
       status(result) mustBe 200

@@ -25,8 +25,12 @@ object ToggleController extends Results with JsonResponses with ToggleActorRespo
   val sampleSetGlobalRollout = SetGlobalRolloutCommand(42)
 }
 
-class ToggleController(config: Config, provider: ToggleActorProvider) extends Controller with EventPublishing {
+class ToggleController(config: Config, provider: ToggleActorProvider) extends Controller with EventPublishing with Authentication {
   import ToggleController._
+
+  override def authConfig = config.auth
+
+  val AuthenticatedWithJson = Authenticated andThen OnlyJson
 
   implicit val timeout = Timeout(config.actorTimeout)
 
@@ -40,7 +44,7 @@ class ToggleController(config: Config, provider: ToggleActorProvider) extends Co
       .andThen { case _ => provider.stop(toggleActor) }
   }
 
-  def get(toggleId: String) = ActionWithJson.async { request =>
+  def get(toggleId: String) = AuthenticatedWithJson.async { request =>
     import play.api.libs.concurrent.Execution.Implicits._
     implicit val actionId = "get-toggle"
 
@@ -56,7 +60,7 @@ class ToggleController(config: Config, provider: ToggleActorProvider) extends Co
     }
   }
 
-  def create = ActionWithJson.async(json(sampleCreateToggle)) { request =>
+  def create = AuthenticatedWithJson.async(json(sampleCreateToggle)) { request =>
     import play.api.libs.concurrent.Execution.Implicits._
     val command  = request.body
     val toggleId = ToggleActor.toId(command.name)
@@ -75,7 +79,7 @@ class ToggleController(config: Config, provider: ToggleActorProvider) extends Co
     }
   }
 
-  def update(toggleId: String) = ActionWithJson.async(json(sampleUpdateToggle)) { request =>
+  def update(toggleId: String) = AuthenticatedWithJson.async(json(sampleUpdateToggle)) { request =>
     import play.api.libs.concurrent.Execution.Implicits._
     val command  = request.body
     implicit val actionId = "update-toggle"
@@ -90,7 +94,7 @@ class ToggleController(config: Config, provider: ToggleActorProvider) extends Co
     }
   }
 
-  def delete(toggleId: String) = ActionWithJson.async { request =>
+  def delete(toggleId: String) = AuthenticatedWithJson.async { request =>
     import play.api.libs.concurrent.Execution.Implicits._
     implicit val actionId = "delete-toggle"
 
@@ -104,7 +108,7 @@ class ToggleController(config: Config, provider: ToggleActorProvider) extends Co
     }
   }
 
-  def setGlobalRollout(toggleId: String) = ActionWithJson.async(json(sampleSetGlobalRollout)) { request =>
+  def setGlobalRollout(toggleId: String) = AuthenticatedWithJson.async(json(sampleSetGlobalRollout)) { request =>
     import play.api.libs.concurrent.Execution.Implicits._
     val command = request.body
     implicit val actionId = "set-global-rollout"
@@ -119,7 +123,7 @@ class ToggleController(config: Config, provider: ToggleActorProvider) extends Co
     }
   }
 
-  def deleteGlobalRollout(toggleId: String) = ActionWithJson.async { request =>
+  def deleteGlobalRollout(toggleId: String) = AuthenticatedWithJson.async { request =>
     import play.api.libs.concurrent.Execution.Implicits._
     implicit val actionId = "delete-global-rollout"
 
