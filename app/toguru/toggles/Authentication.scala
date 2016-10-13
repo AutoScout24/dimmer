@@ -58,10 +58,12 @@ trait Authentication {
         None
     }
 
-    if(config.disabled)
-      Some(DevUser)
+    val maybeHeader = request.headers.get(HeaderNames.AUTHORIZATION)
+    if (config.disabled)
+      // if header exist, try to extract the principal. If the header is missing, yield the dev user.
+      maybeHeader.map(toPrincipal).getOrElse(Some(DevUser))
     else
-      request.headers.get(HeaderNames.AUTHORIZATION).flatMap(toPrincipal)
+      maybeHeader.flatMap(toPrincipal)
   }
 
   def unauthorizedResponse(header: RequestHeader): Result = Unauthorized(Json.obj(

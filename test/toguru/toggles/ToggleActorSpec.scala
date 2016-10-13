@@ -50,6 +50,12 @@ class ToggleActorSpec extends ActorSpec {
       response mustBe ToggleAlreadyExists(toggleId)
     }
 
+    "reject create command when authentication is missing" in new ToggleActorSetup {
+      val actor = createActor()
+      val response = await(actor ? createCmd)
+      response mustBe AuthenticationMissing
+    }
+
     "update toggle when toggle exists" in new ToggleActorSetup {
       val actor = createActor(Some(toggle))
 
@@ -65,7 +71,13 @@ class ToggleActorSpec extends ActorSpec {
       response mustBe ToggleDoesNotExist(toggleId)
     }
 
-    "delete toggle when toggle exists and command confirms delete" in new ToggleActorSetup {
+    "reject update when authentication is missing" in new ToggleActorSetup {
+      val actor = createActor(Some(toggle))
+      val response = await(actor ? updateCmd)
+      response mustBe AuthenticationMissing
+    }
+
+    "delete toggle when toggle exists" in new ToggleActorSetup {
       val actor = createActor(Some(toggle))
       val response = await(actor ? delete)
       response mustBe Success
