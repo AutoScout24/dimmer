@@ -16,9 +16,7 @@ import toguru.toggles.AuditLogActor.GetLog
 
 class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: Config) extends Controller with EventPublishing with JsonResponses with Authentication {
 
-  override def authConfig = config.auth
-
-  val AuthenticatedWithJson = Authenticated andThen OnlyJson
+  val AuthenticatedWithJson = ActionWithJson andThen Authenticate(config.auth)
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
 

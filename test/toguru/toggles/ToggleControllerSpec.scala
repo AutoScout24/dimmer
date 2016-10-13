@@ -21,7 +21,9 @@ import scala.concurrent.duration._
 
 class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with AuthorizationHelpers {
 
-  def createController(props: Props): ToggleController = {
+  val nopActor = Props(new Actor { def receive = { case _ => () } })
+
+  def createController(props: Props = nopActor): ToggleController = {
     val system = ActorSystem()
     val factory = new ToggleActorProvider {
       def create(id: String): ActorRef = system.actorOf(props)
@@ -63,10 +65,8 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
       (bodyJson \ "id").asOpt[String] mustBe Some("toggle-id")
     }
 
-    "return 401 when not api key given" in {
-      val controller = createController(Props(new Actor {
-        def receive = { case GetToggle => sender ! None }
-      }))
+    "deny access when not api key given" in {
+      val controller = createController()
       val request = FakeRequest()
 
       val result: Future[Result] = controller.get("toggle-id")().apply(request)
@@ -74,17 +74,14 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
       verifyStatus(result, 401, "Unauthorized")
     }
 
-    "return 401 when wrong api key given" in {
-      val controller = createController(Props(new Actor {
-        def receive = { case GetToggle => sender ! None }
-      }))
+    "deny access when wrong api key given" in {
+      val controller = createController()
       val request = requestWithApiKey("wrong-api-key")
 
       val result: Future[Result] = controller.get("toggle-id")().apply(request)
 
       verifyStatus(result, 401, "Unauthorized")
     }
-
 
     "return 404 for a non-existing toggle" in {
       val controller = createController(Props(new Actor {
@@ -100,7 +97,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
   "create method" should {
     "return ok when given a create command" in {
       val controller = createController(Props(new Actor {
-        def receive = { case _ : CreateToggleCommand => sender ! CreateSucceeded("toggle-id") }
+        def receive = { case _ => sender ! CreateSucceeded("toggle-id") }
       }))
       val request = authorizedRequest.withBody(CreateToggleCommand("toggle", "description", Map.empty))
 
@@ -112,22 +109,33 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
   }
 
   "update method" should {
+    val updateToggle = UpdateToggleCommand(Some("toggle"), Some("description"), None)
+
     "return ok when given an update command" in {
       val controller = createController(Props(new Actor {
-        def receive = { case _ : UpdateToggleCommand => sender ! Success }
+        def receive = { case _ => sender ! Success }
       }))
-      val request = authorizedRequest.withBody(UpdateToggleCommand(Some("toggle"), Some("description"), None))
+      val request = authorizedRequest.withBody(updateToggle)
 
       val result: Future[Result] = controller.update("toggle").apply(request)
 
       verifyStatus(result, 200, "Ok")
     }
+
+    "deny access when not api key given" in {
+      val controller = createController()
+      val request = FakeRequest().withBody(updateToggle)
+
+      val result: Future[Result] = controller.update("toggle").apply(request)
+
+      verifyStatus(result, 401, "Unauthorized")
+    }
   }
 
-  "update method" should {
+  "delete method" should {
     "return ok when given a success confirmation" in {
       val controller = createController(Props(new Actor {
-        def receive = { case DeleteToggleCommand => sender ! Success }
+        def receive = { case _ => sender ! Success }
       }))
 
       val result: Future[Result] = controller.delete("toggle").apply(authorizedRequest)
@@ -137,19 +145,27 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
 
     "return not found when toggles does not exist" in {
       val controller = createController(Props(new Actor {
-        def receive = { case DeleteToggleCommand => sender ! ToggleDoesNotExist("toggle") }
+        def receive = { case _ => sender ! ToggleDoesNotExist("toggle") }
       }))
 
       val result: Future[Result] = controller.delete("toggle").apply(authorizedRequest)
 
       verifyStatus(result, 404, "Not found")
     }
+
+    "deny access when not api key given" in {
+      val controller = createController()
+
+      val result: Future[Result] = controller.delete("toggle").apply(FakeRequest())
+
+      verifyStatus(result, 401, "Unauthorized")
+    }
   }
 
   "set global rollout condition" should {
     "return ok when given a set command" in {
       val controller = createController(Props(new Actor {
-        def receive = { case _ : SetGlobalRolloutCommand => sender ! Success }
+        def receive = { case _ => sender ! Success }
       }))
       val request = authorizedRequest.withBody(SetGlobalRolloutCommand(42))
 
@@ -168,17 +184,34 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
 
       verifyStatus(result, 404, "Not found")
     }
+
+    "deny access when not api key given" in {
+      val controller = createController()
+      val request = FakeRequest().withBody(SetGlobalRolloutCommand(42))
+
+      val result: Future[Result] = controller.setGlobalRollout("toggle-id").apply(request)
+
+      verifyStatus(result, 401, "Unauthorized")
+    }
   }
 
   "delete global rollout condition" should {
     "return ok when called" in {
       val controller = createController(Props(new Actor {
-        def receive = { case DeleteGlobalRolloutCommand => sender ! Success }
+        def receive = { case _ => sender ! Success }
       }))
 
       val result: Future[Result] = controller.deleteGlobalRollout("toggle-id")().apply(authorizedRequest)
 
       verifyStatus(result, 200, "Ok")
+    }
+
+    "deny access when not api key given" in {
+      val controller = createController()
+
+      val result: Future[Result] = controller.deleteGlobalRollout("toggle-id")().apply(FakeRequest())
+
+      verifyStatus(result, 401, "Unauthorized")
     }
   }
 

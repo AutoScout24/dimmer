@@ -1,11 +1,12 @@
 package toguru.toggles
 
-import play.api.mvc.{RequestHeader, Result}
-import play.api.mvc.Security.AuthenticatedBuilder
-import play.mvc.Http.HeaderNames
-import Authentication._
 import play.api.libs.json.Json
 import play.api.mvc.Results._
+import play.api.mvc._
+import play.mvc.Http.HeaderNames
+import toguru.toggles.Authentication._
+
+import scala.concurrent.Future
 
 object Authentication {
   val ApiKeyPrefix = "api-key"
@@ -22,26 +23,42 @@ object Authentication {
   case class ApiKey(name: String, key: String)
 
   case class Config(apiKeys: Seq[ApiKey], disabled: Boolean)
-}
 
+  class AuthenticatedRequest[A](val principal: Principal, request: Request[A]) extends WrappedRequest(request)
+}
 
 trait Authentication {
 
-  def authConfig: Authentication.Config
+  import scala.language.higherKinds
 
-  object Authenticated extends AuthenticatedBuilder[Principal](extractPrincipal, unauthorizedResponse)
+  type Refiner[R[_]] = ActionRefiner[R, AuthenticatedRequest]
 
-  def extractPrincipal[A](request: RequestHeader): Option[Principal] = {
+  object Authenticate {
+
+    def apply[R[_] <: Request[_]](config: Config): Refiner[R] = new Refiner[R] {
+
+      override protected def refine[A](r: R[A]): Future[Either[Result, AuthenticatedRequest[A]]] = {
+        // type inference can't establish R[A] <: Request[A] here - this cast might be actually unsound.
+        val request = r.asInstanceOf[Request[A]]
+        extractPrincipal(config, request) match {
+          case Some(p) => Future.successful(Right(new AuthenticatedRequest(p, request)))
+          case None    => Future.successful(Left(unauthorizedResponse(request)))
+        }
+      }
+    }
+  }
+
+  def extractPrincipal[A](config: Config, request: RequestHeader): Option[Principal] = {
     def toPrincipal: String => Option[Principal] = {
 
       case ApiKeyRegex(key) =>
-        authConfig.apiKeys.collectFirst { case ApiKey(name, `key`) => ApiKeyPrincipal(name) }
+        config.apiKeys.collectFirst { case ApiKey(name, `key`) => ApiKeyPrincipal(name) }
 
       case _  =>
         None
     }
 
-    if(authConfig.disabled)
+    if(config.disabled)
       Some(DevUser)
     else
       request.headers.get(HeaderNames.AUTHORIZATION).flatMap(toPrincipal)

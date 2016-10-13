@@ -5,6 +5,7 @@ import toguru.logging.EventPublishing
 import akka.actor.{ActorRef, ActorSystem, Props}
 import ToggleActor._
 import toguru.events.toggles._
+import toguru.toggles.Authentication.Principal
 
 trait ToggleActorProvider {
   def create(id: String): ActorRef
@@ -24,6 +25,10 @@ object ToggleActor {
   case object DeleteToggleCommand
 
   case object GetToggle
+
+  case class AuthenticatedCommand[T](command: T, user: Principal)
+
+  case object AuthenticationMissing
 
   case class SetGlobalRolloutCommand(percentage: Int)
 
@@ -72,26 +77,27 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
   }
 
   override def receiveCommand = handleToggleCommands.orElse(
-    withExistingToggle(t => handleToggleModificationCommands(t).orElse(handleGlobalRolloutCommands(t))))
+    withMetadata(m =>
+      withExistingToggle(t => handleToggleModificationCommands(m, t).orElse(handleGlobalRolloutCommands(m, t)))))
 
   def handleToggleCommands: Receive = {
     case Shutdown => context.stop(self)
 
     case GetToggle => sender ! maybeToggle
 
-    case CreateToggleCommand(name, description, tags) =>
+    case AuthenticatedCommand(CreateToggleCommand(name, description, tags), principal) =>
       maybeToggle match {
         case Some(_) => sender ! ToggleAlreadyExists(toggleId)
 
         case None =>
-          persist(ToggleCreated(name, description, tags, meta)) { created =>
+          persist(ToggleCreated(name, description, tags, metadata(principal))) { created =>
             receiveRecover(created)
             sender ! CreateSucceeded(toggleId)
           }
       }
   }
 
-  def handleToggleModificationCommands(t: Toggle): Receive = {
+  def handleToggleModificationCommands(meta: Option[Metadata], t: Toggle): Receive = {
     case UpdateToggleCommand(name, description, tags) =>
       val updated = ToggleUpdated(
         name.getOrElse(t.name), description.getOrElse(t.description), tags.getOrElse(t.tags), meta)
@@ -107,7 +113,7 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
     }
   }
 
-  def handleGlobalRolloutCommands(toggle: Toggle): Receive =  {
+  def handleGlobalRolloutCommands(meta: Option[Metadata], toggle: Toggle): Receive =  {
     case SetGlobalRolloutCommand(p) =>
       val event = if(toggle.rolloutPercentage.isDefined) GlobalRolloutUpdated(p, meta) else GlobalRolloutCreated(p, meta)
       persist(event) { event =>
@@ -126,7 +132,7 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
       }
   }
 
-  def meta = Some(Metadata(time, ""))
+  def metadata(user: Principal) = Some(Metadata(time, user.name))
 
   def time = System.currentTimeMillis
 
@@ -143,5 +149,10 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
   def withExistingToggle(handler: Toggle => Receive): Receive = {
     case command if maybeToggle.isDefined => handler(maybeToggle.get)(command)
     case _                                => sender ! ToggleDoesNotExist(toggleId)
+  }
+
+  def withMetadata(handler: Option[Metadata] => Receive): Receive = {
+    case AuthenticatedCommand(command, principal) => handler(metadata(principal))(command)
+    case _                                        => sender ! AuthenticationMissing
   }
 }
