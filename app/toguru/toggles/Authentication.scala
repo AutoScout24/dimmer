@@ -3,7 +3,7 @@ package toguru.toggles
 import play.api.libs.json.Json
 import play.api.mvc.Results._
 import play.api.mvc._
-import play.mvc.Http.HeaderNames
+import play.mvc.Http.HeaderNames.AUTHORIZATION
 import toguru.toggles.Authentication._
 
 import scala.concurrent.Future
@@ -58,7 +58,7 @@ trait Authentication {
         None
     }
 
-    val maybeHeader = request.headers.get(HeaderNames.AUTHORIZATION)
+    val maybeHeader = request.headers.get(AUTHORIZATION)
     if (config.disabled)
       // if header exist, try to extract the principal. If the header is missing, yield the dev user.
       maybeHeader.map(toPrincipal).getOrElse(Some(DevUser))
@@ -68,7 +68,7 @@ trait Authentication {
 
   def unauthorizedResponse(header: RequestHeader): Result = Unauthorized(Json.obj(
       "status"  -> "Unauthorized",
-      "message" -> "Authentication header missing or invalid",
-      "remedy"  -> s"Provide a valid Authentication header 'Authentication: $ApiKeyPrefix [your-api-key]' in your request"
+      "message" -> s"$AUTHORIZATION header missing or invalid",
+      "remedy"  -> s"Provide a valid $AUTHORIZATION header '$AUTHORIZATION: $ApiKeyPrefix [your-api-key]' in your request"
     ))
 }
