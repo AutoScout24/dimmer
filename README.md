@@ -6,81 +6,202 @@
 
 The toggle guru (Japanese for toggle).
 
+<!-- installing doctoc: https://github.com/thlorenz/doctoc#installation -->
+<!-- tocdoc command: doctoc README.md --maxlevel 3 -->
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-## Development Setup
+- [Contributing](#contributing)
+- [Management API](#management-api)
+  - [Authentication](#authentication)
+  - [Error Handling](#error-handling)
+- [Getting the Audit Log](#getting-the-audit-log)
+- [Getting the current Toggle State](#getting-the-current-toggle-state)
+- [Managing Toggles](#managing-toggles)
+  - [Creating a Toggle](#creating-a-toggle)
+  - [Deleting a Toggle](#deleting-a-toggle)
+  - [Getting Toggle data](#getting-toggle-data)
+  - [Change Toggle Rollout Percentage](#change-toggle-rollout-percentage)
+  - [Disabling a Toggle](#disabling-a-toggle)
+- [Related projects](#related-projects)
+- [License](#license)
 
-### Dependencies
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-A dev environment requires [Docker](https://www.docker.com/), [Docker Compose](https://docs.docker.com/compose/) and JDK 8 (e.g. [OpenJDK 8](http://openjdk.java.net/install/)).
+## Contributing
 
-### Getting Started
+See [contribution documentation](CONTRIBUTING.md).
 
-Start your dev server with
+## Management API
+
+The management API is exposed via a REST interface over http(s).
+
+### Authentication
+
+All management API endpoints requires authentication with an api key. For this,
+provide host header with a valid api key in your http requests:
 
 ```
-docker-compose up --build
+Authorization: api-key [your-api-key]
 ```
 
-Run the tests with
+with curl, the syntax to add the proper header is
 
 ```
-./activator test
+curl -H "Authorization: api-key ???" https://your-endpoint.example.com/auditlog
 ```
 
-Build a release with
+### Error Handling
 
+The management API tries to help on how to proceed when a problem occurs (due to
+e.g. lack of authentication or a malformed request).  
+
+## Getting the Audit Log
+
+Http method and route: `GET /auditlog`
+
+Payload format: no payload required
+
+Response format:
 ```
-./activator docker:publishLocal
+[
+  { "id": "toguru-demo-toggle",
+    "event": "toggle created",
+    "name": "Toguru demo toggle",
+    "description": "Toguru demo toggle",
+    "tags": { "team": "Toguru team" },
+    "meta": {
+      "time": "2016-12-20T15:05:46.705Z",
+      "epoch": 1482246346705,
+      "user": "toguru-team"
+    }
+  }
+]
 ```
 
-## Simplified Akka Persistence Setup
+## Getting the current Toggle State
 
-We decided to use a simplified Akka persistence setup in which we rely on the
-data storage for high availability and failover; by this, we avoid having to set
-up an Akka cluster. At the same time, this means that in order to prevent
-concurrent and conflicting persistent actor states between multiple servers, we
-have to bring up a persistent actor in each request, replay its history, and
-stop the actor after the request has been processed. The request processing flow
-that is entailed by this decision is detailed in the following section.
+This endpoint is used by the Toguru clients to retrieve the current state of all
+toggles.
 
-## Http Request Processing Flow
+Http method and route: `GET /togglestate`
 
-![Toguru Request Flow](https://cloud.githubusercontent.com/assets/6724788/18165628/99d02770-7046-11e6-854f-57fef3071016.png)
+Payload format: no payload required
 
-Http requests that modify persistent data (i.e. POST and PUT) are processed in
-the following way:
+Response format:
+```
+[
+  { "id": "toguru-demo-toggle",
+    "tags": { "team": "Toguru team" },
+    "rolloutPercentage":20
+  }
+]
+```
 
-1. *request:* a [controller action](https://github.com/AutoScout24/toguru/blob/da8f1d70d3558c71eec923c1fc385a8324d3b33a/app/toguru/toggles/ToggleController.scala#L63)
-is invoked with a request to process.
-2. *create:* the persistent actor that is needed to process the request [is
-created](https://github.com/AutoScout24/toguru/blob/da8f1d70d3558c71eec923c1fc385a8324d3b33a/app/toguru/toggles/ToggleController.scala#L41) -
-as usual, indirectly through the Akka actor system.
-3. *recover:* On actor initialization, Akka persistence replays all events from
-the database to the actor, and [the actor recovers](https://github.com/AutoScout24/toguru/blob/da8f1d70d3558c71eec923c1fc385a8324d3b33a/app/toguru/toggles/ToggleActor.scala#L47-L59)
-its internal state based on
-the replayed events.
-4. *ask:* the controller [asks the actor](https://github.com/AutoScout24/toguru/blob/da8f1d70d3558c71eec923c1fc385a8324d3b33a/app/toguru/toggles/ToggleController.scala#L70)
-(asynchronously) to execute a command, and the [actor validates](https://github.com/AutoScout24/toguru/blob/da8f1d70d3558c71eec923c1fc385a8324d3b33a/app/toguru/toggles/ToggleActor.scala#L67-L70)
-that the command can be executed.
-5. *persist:* After successful validation, the [actor persists derived events](https://github.com/AutoScout24/toguru/blob/da8f1d70d3558c71eec923c1fc385a8324d3b33a/app/toguru/toggles/ToggleActor.scala#L71)
-to the journal. A [custom event adapter](https://github.com/AutoScout24/toguru/blob/da8f1d70d3558c71eec923c1fc385a8324d3b33a/app/toguru/toggles/ToggleEventSerialization.scala#L42)
-(Tagging in the picture) tags the events for later persistent queries, and a
-[custom ProtoBuf serializer](https://github.com/AutoScout24/toguru/blob/da8f1d70d3558c71eec923c1fc385a8324d3b33a/app/toguru/toggles/ToggleEventSerialization.scala#L15)
-serializes the events [specified as protobuf messages](https://github.com/AutoScout24/toguru/blob/da8f1d70d3558c71eec923c1fc385a8324d3b33a/conf/protobuf/toggles.proto#L7-L12).
-6. *recover:* Akka invokes the [receiveRecover method](https://github.com/AutoScout24/toguru/blob/da8f1d70d3558c71eec923c1fc385a8324d3b33a/app/toguru/toggles/ToggleActor.scala#L48-L49)
-to replay the successfully persisted events to the actor.
-7. *update:* The actor [updates](https://github.com/AutoScout24/toguru/blob/da8f1d70d3558c71eec923c1fc385a8324d3b33a/app/toguru/toggles/ToggleActor.scala#L48-L49) its [internal state](https://github.com/AutoScout24/toguru/blob/da8f1d70d3558c71eec923c1fc385a8324d3b33a/app/toguru/toggles/ToggleActor.scala#L43)
-based on the newly persisted events.
-8. *reply:* A [reply is sent](https://github.com/AutoScout24/toguru/blob/da8f1d70d3558c71eec923c1fc385a8324d3b33a/app/toguru/toggles/ToggleActor.scala#L73)
-to the controller that describes the result of the command.
-9. *stop:* The controller [stops the actor](https://github.com/AutoScout24/toguru/blob/da8f1d70d3558c71eec923c1fc385a8324d3b33a/app/toguru/toggles/ToggleController.scala#L44),
-since it has completed its task.
-10. *result:* A http result [is send to the client](https://github.com/AutoScout24/toguru/blob/da8f1d70d3558c71eec923c1fc385a8324d3b33a/app/toguru/toggles/ToggleController.scala#L71-L77)
-based on the reply from the persistent actor.
+## Managing Toggles
 
-The processing of GET requests is similar; since it does not alter the database
-and the actor state, the steps 5. (persist), 6. (recover), and 7. (update) can
-be omitted in the request flow.
+### Creating a Toggle
+
+Http method and route: `POST /toggle`
+
+Payload format:
+```
+{ "name": "Toguru demo toggle",
+  "description": "Toguru demo toggle",
+  "tags": { "team": "Toguru team" }
+}
+```
+
+All fields are mandatory. The JSON object under tags may have arbitrary fields,
+and must have string fields only. An empty tags map is allowed.
+
+Response format:
+```
+{ "status":"Ok", "id": "toguru-demo-toggle" }
+```
+
+curl example:
+```
+curl -XPOST https://your-endpoint.example.com/toggle \
+  -d '{"name":"Toguru demo toggle","description":"Toguru demo toggle","tags":{"team":"Toguru team"}}'
+```
+
+### Deleting a Toggle
+
+Http method and route: `DELETE /toggle/:id`
+
+Payload format: no payload required
+
+Response format:
+```
+{ "status": "Ok"}
+```
+
+curl example:
+```
+curl -XDELETE https://your-endpoint.example.com/toggle/toguru-demo-toggle
+```
+
+### Getting Toggle data
+
+Http method and route: `GET /toggle/:id`
+
+Payload format: no payload required
+
+Response format:
+```
+{ "id": "toguru-demo-toggle",
+  "name": "Toguru demo toggle",
+  "description": "Toguru demo toggle",
+  "tags": { "team": "Toguru team"} }
+```
+
+curl example:
+```
+curl https://your-endpoint.example.com/toggle/toguru-demo-toggle
+```
+
+### Change Toggle Rollout Percentage
+
+Http method and route: `PUT /toggle/:id/globalrollout`
+
+Payload format:
+```
+{ "percentage": 20 }
+```
+
+Response format:
+```
+{ "status": "Ok"}
+```
+
+curl example:
+```
+curl -XPUT https://your-endpoint.example.com/toggle/toguru-demo-toggle/globalrollout \
+  -d '{"percentage":20}'
+```
+
+### Disabling a Toggle
+
+Http method and route: `DELETE /toggle/:id/globalrollout`
+
+Payload format: no payload required
+
+Response format:
+```
+{ "status": "Ok"}
+```
+
+curl example:
+```
+curl -XDELETE https://your-endpoint.example.com/toggle/toguru-demo-toggle/globalrollout
+```
+
+
+## Related projects
+
+* [AutoScout24/toguru-scala-client](https://github.com/AutoScout24/toguru-scala-client): Scala client for this toggling service
 
 ## License
 
