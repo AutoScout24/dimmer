@@ -10,18 +10,16 @@ The toggle guru (Japanese for toggle).
 <!-- tocdoc command: doctoc README.md --maxlevel 3 -->
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 - [Contributing](#contributing)
 - [Management API](#management-api)
   - [Authentication](#authentication)
   - [Error Handling](#error-handling)
-- [Getting the Audit Log](#getting-the-audit-log)
-- [Getting the current Toggle State](#getting-the-current-toggle-state)
-- [Managing Toggles](#managing-toggles)
+  - [Getting the Audit Log](#getting-the-audit-log)
+  - [Getting the current Toggle State](#getting-the-current-toggle-state)
   - [Creating a Toggle](#creating-a-toggle)
   - [Deleting a Toggle](#deleting-a-toggle)
-  - [Getting Toggle data](#getting-toggle-data)
+  - [Getting Toggle Data](#getting-toggle-data)
   - [Change Toggle Rollout Percentage](#change-toggle-rollout-percentage)
   - [Disabling a Toggle](#disabling-a-toggle)
 - [Related projects](#related-projects)
@@ -57,7 +55,7 @@ curl -H "Authorization: api-key ???" https://your-endpoint.example.com/auditlog
 The management API tries to help on how to proceed when a problem occurs (due to
 e.g. lack of authentication or a malformed request).  
 
-## Getting the Audit Log
+### Getting the Audit Log
 
 Http method and route: `GET /auditlog`
 
@@ -80,7 +78,7 @@ Response format:
 ]
 ```
 
-## Getting the current Toggle State
+### Getting the current Toggle State
 
 This endpoint is used by the Toguru clients to retrieve the current state of all
 toggles.
@@ -98,8 +96,6 @@ Response format:
   }
 ]
 ```
-
-## Managing Toggles
 
 ### Creating a Toggle
 
@@ -143,7 +139,7 @@ curl example:
 curl -XDELETE https://your-endpoint.example.com/toggle/toguru-demo-toggle
 ```
 
-### Getting Toggle data
+### Getting Toggle Data
 
 Http method and route: `GET /toggle/:id`
 
