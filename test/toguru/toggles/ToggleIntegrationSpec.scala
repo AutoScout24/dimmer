@@ -21,7 +21,7 @@ import scala.concurrent.duration.{FiniteDuration, _}
 
 
 class ToggleIntegrationSpec extends PlaySpec
-  with BeforeAndAfterAll with Results with PostgresSetup with OneServerPerSuite with FutureAwaits with DefaultAwaitTimeout {
+  with BeforeAndAfterAll with Results with PostgresSetup with OneServerPerSuite with FutureAwaits with DefaultAwaitTimeout with WaitFor {
 
   override def config = app.injector.instanceOf[Config].typesafeConfig
 
@@ -182,25 +182,6 @@ class ToggleIntegrationSpec extends PlaySpec
 
   def namedKey[T](clazz: Class[T], name: String): BindingKey[T] =
     new BindingKey(clazz, Some(QualifierInstance(new NamedImpl(name))))
-
-  /**
-    *
-    * @param times how many times we want to try.
-    * @param test returns true if test (finally) succeeded, false if we need to retry
-    */
-  def waitFor(times: Int, wait: FiniteDuration = 1.second)(test: => Boolean): Unit = {
-    val success = (1 to times).exists { i =>
-      if(test) {
-        true
-      } else {
-        if(i < times)
-          Thread.sleep(wait.toMillis)
-        false
-      }
-    }
-
-    success mustBe true
-  }
 
   def verifyResponseIsOk(createResponse: WSResponse): Unit = {
     createResponse.status mustBe OK

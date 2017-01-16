@@ -3,7 +3,8 @@ package toguru.toggles
 import akka.persistence.journal.{Tagged, WriteEventAdapter}
 import akka.serialization.SerializerWithStringManifest
 import com.trueaccord.scalapb.GeneratedMessage
-import toguru.events.toggles._
+import toguru.toggles.events._
+import toguru.toggles.snapshots.ToggleSnapshot
 
 /**
   * Marker trait for toggle events.
@@ -54,5 +55,25 @@ class ToggleEventTagging extends WriteEventAdapter {
   override def toJournal(event: Any): Any = event match {
     case _: ToggleEvent          => withTag(event, "toggle")
     case _                       => event
+  }
+}
+
+/**
+  * Serializer for toggle snapshots.
+  */
+class ToggleSnapshotProtoBufSerializer extends SerializerWithStringManifest {
+
+  override def identifier: Int = 5001
+
+  override def manifest(o: AnyRef): String = o.getClass.getSimpleName
+
+  final val ToggleSnapshotManifest = classOf[ToggleSnapshot].getSimpleName
+
+  override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef = manifest match {
+    case ToggleSnapshotManifest => ToggleSnapshot.parseFrom(bytes)
+  }
+
+  override def toBinary(o: AnyRef): Array[Byte] = o match {
+    case s: ToggleSnapshot => s.toByteArray
   }
 }

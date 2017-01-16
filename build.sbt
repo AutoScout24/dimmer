@@ -97,12 +97,13 @@ coverageMinimum := 80
 coverageFailOnMinimum := true
 
 coverageExcludedPackages := Seq(
-  """router""",                      // generated code
-  """toguru\.events\.toggles\..*""", // generated code
-  """.*ReverseApplication""",        // generated code
-  """.*Reverse.*Controller""",       // generated code
-  """toguru\.filters\..*""",         // low test value and hard to test
-  """toguru\.app\.ErrorHandler"""    // low test value and hard to test
+  """router""",                         // generated code
+  """toguru\.toggles\.events\..*""",    // generated code
+  """toguru\.toggles\.snapshots\..*""", // generated code
+  """.*ReverseApplication""",           // generated code
+  """.*Reverse.*Controller""",          // generated code
+  """toguru\.filters\..*""",            // low test value and hard to test
+  """toguru\.app\.ErrorHandler"""       // low test value and hard to test
 ).mkString(";")
 
 // *** Plugins and configs ***

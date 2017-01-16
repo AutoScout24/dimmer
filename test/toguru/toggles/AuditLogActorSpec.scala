@@ -2,21 +2,25 @@ package toguru.toggles
 
 import akka.pattern.ask
 import akka.actor.{ActorRef, Props}
-import toguru.events.toggles._
-import toguru.toggles.AuditLogActor.GetLog
+import toguru.toggles.events._
+import toguru.toggles.AuditLogActor._
+import scala.concurrent.duration._
+import AuditLog.Entry
 
 class AuditLogActorSpec extends ActorSpec {
 
+  def meta(time: Long) = Some(Metadata(time, "testUser"))
+
   val events = List(
-    ("toggle-1", ToggleCreated("toggle 1", "first toggle", Map("team" -> "Toguru team"))),
-    ("toggle-1", ToggleUpdated("toggle 1", "very first toggle", Map("team" -> "Toguru team"))),
-    ("toggle-1", GlobalRolloutCreated(20)),
-    ("toggle-1", GlobalRolloutUpdated(50)),
-    ("toggle-1", GlobalRolloutDeleted())
+    Entry("toggle-1", ToggleCreated("toggle 1", "first toggle", Map("team" -> "Toguru team"), meta(0))),
+    Entry("toggle-1", ToggleUpdated("toggle 1", "very first toggle", Map("team" -> "Toguru team"), meta(10))),
+    Entry("toggle-1", GlobalRolloutCreated(20, meta(20))),
+    Entry("toggle-1", GlobalRolloutUpdated(50, meta(30))),
+    Entry("toggle-1", GlobalRolloutDeleted(meta(40)))
   )
 
-  def createActor(events: Seq[(String, ToggleEvent)] = List.empty): ActorRef =
-    system.actorOf(Props(new AuditLogActor((_,_) => (), events)))
+  def createActor(events: Seq[Entry] = List.empty, time: Long = 0, retentionLength: Int = 10, retentionTime: FiniteDuration = 10.seconds): ActorRef =
+    system.actorOf(Props(new AuditLogActor((_,_) => (), () => time, retentionTime, retentionLength, events)))
 
 
   "audit log actor" should {
@@ -34,11 +38,31 @@ class AuditLogActorSpec extends ActorSpec {
       val id1 = "toggle-1"
       val id2 = "toggle-2"
 
-      events.foreach(e => actor ! e)
+      events.foreach(e => actor ! (e.id, e.event))
 
       val response = await(actor ? GetLog)
 
       response mustBe events.reverse
+    }
+
+    "truncate audit log on insertion" in {
+      val actor = createActor(retentionLength = 3)
+
+      events.foreach(e => actor ! (e.id, e.event))
+
+      val response = await(actor ? GetLog)
+
+      response mustBe events.reverse.take(3)
+    }
+
+    "truncate audit log on cleanup" in {
+      val actor = createActor(events = events.reverse, retentionTime = 100.millis, time = 125)
+
+      actor ! Cleanup
+
+      val response = await(actor ? GetLog)
+
+      response mustBe events.reverse.take(2)
     }
   }
 }

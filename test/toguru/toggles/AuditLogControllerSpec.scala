@@ -9,7 +9,7 @@ import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import toguru.app.Config
-import toguru.events.toggles.{GlobalRolloutCreated, ToggleCreated}
+import toguru.toggles.events.{GlobalRolloutCreated, ToggleCreated}
 import toguru.helpers.AuthorizationHelpers
 import toguru.toggles.AuditLogActor.GetLog
 
@@ -26,6 +26,7 @@ class AuditLogControllerSpec extends PlaySpec with MockitoSugar with Authorizati
       override val actorTimeout = 100.millis
       override val typesafeConfig = mock[TypesafeConfig]
       override def auth = authConfig
+      override def auditLog = AuditLog.Config()
     }
 
     val system = ActorSystem()
@@ -39,8 +40,8 @@ class AuditLogControllerSpec extends PlaySpec with MockitoSugar with Authorizati
       // prepare
       val tags =  Map("team" -> "Toguru team")
       val events = List(
-        ("toggle-1", GlobalRolloutCreated(20)),
-        ("toggle-1", ToggleCreated("toggle 1", "first toggle", tags))
+        AuditLog.Entry("toggle-1", GlobalRolloutCreated(20)),
+        AuditLog.Entry("toggle-1", ToggleCreated("toggle 1", "first toggle", tags))
       )
 
       implicit val reads = Json.reads[ToggleState]

@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+
+package toguru.toggles;
+
+message ToggleSnapshot {
+    bool exists = 1;
+    string name = 2;
+    string description = 3;
+    map<string, string> tags = 4;
+    int32 percentage = 5;
+}

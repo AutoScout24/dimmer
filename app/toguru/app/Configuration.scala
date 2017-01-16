@@ -6,7 +6,7 @@ import javax.inject.{Inject, Singleton}
 
 import com.typesafe.config.{ConfigList, ConfigObject, Config => TypesafeConfig}
 import play.api.Logger
-import toguru.toggles.Authentication
+import toguru.toggles.{AuditLog, Authentication}
 import toguru.toggles.Authentication.ApiKey
 
 import scala.concurrent.duration._
@@ -20,6 +20,8 @@ trait Config {
   val typesafeConfig: TypesafeConfig
 
   val actorTimeout: FiniteDuration
+
+  def auditLog: AuditLog.Config
 }
 
 @Singleton
@@ -30,6 +32,12 @@ class Configuration @Inject() (playConfig: play.api.Configuration) extends Confi
   override lazy val typesafeConfig = playConfig.underlying
 
   override val actorTimeout: FiniteDuration = typesafeConfig.getDuration("actorTimeout",TimeUnit.MILLISECONDS).milliseconds
+
+  override val auditLog = {
+    val retentionTime   = playConfig.getMilliseconds("auditLog.retentionTime").getOrElse(90.days.toMillis).milliseconds
+    val retentionLength = playConfig.getInt("auditLog.retentionLength").getOrElse(10000)
+    AuditLog.Config(retentionTime, retentionLength)
+  }
 
   override val auth = {
     def parseApiKeys(list: ConfigList): List[ApiKey] = list.flatMap {

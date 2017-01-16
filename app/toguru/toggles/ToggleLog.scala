@@ -9,6 +9,8 @@ object ToggleLog {
 
   def sendToggleEvents(readJournal: JdbcReadJournal, shutdown: Any): (ActorContext, ActorRef) => Unit = { (context, self) =>
     implicit val mat: Materializer = ActorMaterializer()(context.system)
-    readJournal.eventsByTag("toggle", 0L).map(env => (env.persistenceId, env.event)).runWith(Sink.actorRef(self, shutdown))
+    readJournal.eventsByTag("toggle", 0L)
+      .map(env => (env.persistenceId, env.event))
+      .runWith(Sink.actorRef(self, shutdown))
   }
 }

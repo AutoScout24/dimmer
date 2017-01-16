@@ -10,9 +10,9 @@ import akka.pattern.ask
 import play.api.libs.json.{Json, OWrites}
 import play.api.mvc.Controller
 import toguru.app.Config
-import toguru.events.toggles._
+import toguru.toggles.events._
 import toguru.logging.EventPublishing
-import toguru.toggles.AuditLogActor.GetLog
+import toguru.toggles.AuditLogActor._
 
 class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: Config) extends Controller with EventPublishing with JsonResponses with Authentication {
 
@@ -34,15 +34,14 @@ class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: C
   val rolloutUpdatedWrites = Json.writes[GlobalRolloutUpdated]
   val rolloutDeletedWrites = Json.writes[GlobalRolloutDeleted]
 
-  implicit val toggleEventWrites = new OWrites[(String, ToggleEvent)] {
+  implicit val toggleEventWrites = new OWrites[AuditLog.Entry] {
 
     def fields(id: String, event: String) =
       Json.obj("id" -> id, "event" -> event)
 
-    override def writes(o: (String, ToggleEvent)) = {
-      val id = o._1
-      val event = o._2
-      event match {
+    override def writes(o: AuditLog.Entry) = {
+      val id = o.id
+      o.event match {
         case e : ToggleCreated        => fields(id, "toggle created")  ++ createdWrites.writes(e)
         case e : ToggleUpdated        => fields(id, "toggle updated")  ++ updatedWrites.writes(e)
         case e : ToggleDeleted        => fields(id, "toggle deleted")  ++ deletedWrites.writes(e)
@@ -59,7 +58,7 @@ class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: C
 
     (actor ? GetLog).map {
       case l: Seq[_] =>
-        val log = l.map(_.asInstanceOf[(String,ToggleEvent)])
+        val log = l.map(_.asInstanceOf[AuditLog.Entry])
         Ok(Json.toJson(log))
     }.recover(serverError("get-toggle-audit"))
   }
