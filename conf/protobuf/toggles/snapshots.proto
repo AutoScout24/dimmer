@@ -1,13 +1,18 @@
 syntax = "proto3";
 
 import "scalapb/scalapb.proto";
+import "google/protobuf/wrappers.proto";
 
 package toguru.toggles;
+
+option (scalapb.options) = {
+  primitive_wrappers: true
+};
 
 message ToggleSnapshot {
     bool exists = 1;
     string name = 2;
     string description = 3;
     map<string, string> tags = 4;
-    int32 percentage = 5;
+    google.protobuf.Int32Value rolloutPercentage = 5;
 }

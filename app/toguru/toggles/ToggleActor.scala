@@ -141,7 +141,7 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
           name = s.name,
           description = s.description,
           tags = s.tags,
-          rolloutPercentage = if(s.percentage == -1) None else Some(s.percentage)))
+          rolloutPercentage = s.rolloutPercentage))
       } else {
         maybeToggle = None
       }
@@ -186,7 +186,7 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
           name = t.name,
           description = t.description,
           tags = t.tags,
-          percentage = t.rolloutPercentage.getOrElse(-1))
+          rolloutPercentage = t.rolloutPercentage)
       }
       saveSnapshot(snapshot)
     }
