@@ -4,13 +4,19 @@ import akka.persistence.journal.{Tagged, WriteEventAdapter}
 import akka.serialization.SerializerWithStringManifest
 import com.trueaccord.scalapb.GeneratedMessage
 import toguru.toggles.events._
-import toguru.toggles.snapshots.ToggleSnapshot
+import toguru.toggles.snapshots.{DeletedToggleSnapshot, ExistingToggleSnapshot}
 
 /**
   * Marker trait for toggle events.
   */
 trait ToggleEvent extends GeneratedMessage {
   def meta: Option[Metadata]
+}
+
+/**
+  * Marker trait for toggle snapshots.
+  */
+trait ToggleSnapshot extends GeneratedMessage {
 }
 
 /**
@@ -67,10 +73,12 @@ class ToggleSnapshotProtoBufSerializer extends SerializerWithStringManifest {
 
   override def manifest(o: AnyRef): String = o.getClass.getSimpleName
 
-  final val ToggleSnapshotManifest = classOf[ToggleSnapshot].getSimpleName
+  final val ExistingToggleSnapshotManifest = classOf[ExistingToggleSnapshot].getSimpleName
+  final val DeletedToggleSnapshotManifest  = classOf[DeletedToggleSnapshot].getSimpleName
 
   override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef = manifest match {
-    case ToggleSnapshotManifest => ToggleSnapshot.parseFrom(bytes)
+    case ExistingToggleSnapshotManifest => ExistingToggleSnapshot.parseFrom(bytes)
+    case DeletedToggleSnapshotManifest  => DeletedToggleSnapshot.parseFrom(bytes)
   }
 
   override def toBinary(o: AnyRef): Array[Byte] = o match {

@@ -5,9 +5,9 @@ import javax.inject.Inject
 import akka.actor.{Actor, ActorContext, ActorRef, Cancellable}
 import akka.persistence.jdbc.query.scaladsl.JdbcReadJournal
 import toguru.logging.EventPublishing
+import toguru.toggles.AuditLog.Entry
+import toguru.toggles.AuditLogActor._
 import toguru.toggles.events._
-import AuditLog.Entry
-import AuditLogActor._
 
 import scala.concurrent.duration._
 
@@ -16,7 +16,7 @@ object AuditLog {
   case class Config(retentionTime: Duration = 90.days, retentionLength: Int = 10000)
 
   case class Entry(id: String, event: ToggleEvent) {
-    def laterThan(deadline: Long): Boolean = event.meta.exists(_.time > deadline)
+    def newerThan(minTime: Long): Boolean = event.meta.exists(_.time > minTime)
   }
 }
 
@@ -61,13 +61,13 @@ class AuditLogActor(
       log = Entry(id, e) +: log.take(retentionLength - 1)
 
     case Cleanup =>
-      val currentDeadline = deadline()
-      log = log.filter(_.laterThan(currentDeadline))
+      val minTime = minEventTime()
+      log = log.filter(_.newerThan(minTime))
 
     case Shutdown => context.stop(self)
   }
 
   def latency(meta: Option[Metadata]): Long = meta.map(m => System.currentTimeMillis - m.time).getOrElse(0)
 
-  def deadline(): Long = time() - retentionTime.toMillis
+  def minEventTime(): Long = time() - retentionTime.toMillis
 }

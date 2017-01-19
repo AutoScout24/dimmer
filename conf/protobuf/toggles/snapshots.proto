@@ -9,10 +9,14 @@ option (scalapb.options) = {
   primitive_wrappers: true
 };
 
-message ToggleSnapshot {
-    bool exists = 1;
+message ExistingToggleSnapshot {
+    option (scalapb.message).extends = "toguru.toggles.ToggleSnapshot";
     string name = 2;
     string description = 3;
     map<string, string> tags = 4;
     google.protobuf.Int32Value rolloutPercentage = 5;
+}
+
+message DeletedToggleSnapshot {
+    option (scalapb.message).extends = "toguru.toggles.ToggleSnapshot";
 }

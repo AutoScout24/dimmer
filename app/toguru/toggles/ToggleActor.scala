@@ -1,12 +1,12 @@
 package toguru.toggles
 
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.persistence._
 import toguru.logging.EventPublishing
-import akka.actor.{ActorRef, ActorSystem, Props}
-import ToggleActor._
+import toguru.toggles.Authentication.Principal
+import toguru.toggles.ToggleActor._
 import toguru.toggles.events._
 import toguru.toggles.snapshots._
-import toguru.toggles.Authentication.Principal
 
 trait ToggleActorProvider {
   def create(id: String): ActorRef
@@ -59,7 +59,7 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
 
   val persistenceId = toggleId
 
-  var snapshotAge = 0
+  var eventsSinceSnapshot = 0
 
    override def receiveCommand = maybeToggle.fold(initial)(existing)
 
@@ -121,7 +121,7 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
 
   def snapshotCommands: Receive = {
     case SaveSnapshotSuccess(metadata) =>
-      snapshotAge = 0
+      eventsSinceSnapshot = 0
       deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = metadata.sequenceNr - 1))
 
     case DeleteSnapshotsSuccess(_) => ()
@@ -134,18 +134,21 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
   }
 
   override def receiveRecover = {
-    case SnapshotOffer(metadata, s: ToggleSnapshot) =>
-      if(s.exists) {
-        maybeToggle = Some(Toggle(
-          id = toggleId,
-          name = s.name,
-          description = s.description,
-          tags = s.tags,
-          rolloutPercentage = s.rolloutPercentage))
-      } else {
-        maybeToggle = None
-      }
-      snapshotAge = 0
+    case SnapshotOffer(metadata, s: ExistingToggleSnapshot) =>
+      val toggle = Toggle(
+        id = toggleId,
+        name = s.name,
+        description = s.description,
+        tags = s.tags,
+        rolloutPercentage = s.rolloutPercentage)
+      maybeToggle = Some(toggle)
+      context.become(existing(toggle))
+      eventsSinceSnapshot = 0
+
+    case SnapshotOffer(metadata, s: DeletedToggleSnapshot) =>
+      maybeToggle = None
+      context.become(initial)
+      eventsSinceSnapshot = 0
 
     case ToggleCreated(name, description, tags, _) =>
       val toggle = Toggle(toggleId, name, description, tags)
@@ -178,11 +181,10 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
   }
 
   def maybeSnapshot() = {
-    snapshotAge += 1
-    if(snapshotAge >= 10) {
-      val snapshot = maybeToggle.fold(ToggleSnapshot().withExists(false)) { t =>
-        ToggleSnapshot(
-          exists = true,
+    eventsSinceSnapshot += 1
+    if(eventsSinceSnapshot >= 10) {
+      val snapshot = maybeToggle.fold[ToggleSnapshot](DeletedToggleSnapshot()) { t =>
+        ExistingToggleSnapshot(
           name = t.name,
           description = t.description,
           tags = t.tags,

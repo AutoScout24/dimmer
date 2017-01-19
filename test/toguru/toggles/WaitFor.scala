@@ -2,24 +2,29 @@ package toguru.toggles
 
 import org.scalatest.MustMatchers
 
+import scala.annotation.tailrec
 import scala.concurrent.duration._
 
 trait WaitFor {
 
   self: MustMatchers =>
 
-  def waitFor(times: Int, wait: FiniteDuration = 1.second)(test: => Boolean): Unit = {
-    val success = (1 to times).exists { i =>
-      if(test) {
-        true
-      } else {
-        if(i < times)
-          Thread.sleep(wait.toMillis)
-        false
-      }
-    }
+  def waitFor(timeout: FiniteDuration, checkEvery: FiniteDuration = 100.millis)(test: => Boolean): Unit = {
+    val deadline = System.currentTimeMillis() + timeout.toMillis
+    var success = false
 
-    success mustBe true
+    @tailrec
+    def tryTest(): Boolean =
+      if(test)
+        true
+      else if(System.currentTimeMillis() + checkEvery.toMillis >= deadline)
+        false
+      else {
+        Thread.sleep(checkEvery.toMillis)
+        tryTest()
+      }
+
+    tryTest() mustBe true
   }
 
 }
