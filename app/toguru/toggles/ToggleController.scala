@@ -6,6 +6,8 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.libs.json._
+import play.api.libs.json.Reads._
+import play.api.libs.functional.syntax._
 import play.api.mvc._
 import toguru.app.Config
 import toguru.logging.EventPublishing
@@ -14,19 +16,21 @@ import toguru.toggles.ToggleActor._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object ToggleController extends Results with JsonResponses with ToggleActorResponses {
+object ToggleController {
 
   implicit val toggleFormat = Json.format[Toggle]
   implicit val createToggleFormat = Json.format[CreateToggleCommand]
   implicit val updateToggleFormat = Json.format[UpdateToggleCommand]
-  implicit val globalRolloutFormat = Json.format[SetGlobalRolloutCommand]
+  implicit val globalRolloutFormat: Format[SetGlobalRolloutCommand] =
+    (JsPath \ "percentage").format[Int](min(1) keepAnd max(100)).inmap(
+      SetGlobalRolloutCommand.apply, unlift(SetGlobalRolloutCommand.unapply))
 
   val sampleCreateToggle = CreateToggleCommand("toggle name", "toggle description", Map("team" -> "Toguru team"))
   val sampleUpdateToggle = UpdateToggleCommand(None, Some("new toggle description"), Some(Map("team" -> "Toguru team")))
   val sampleSetGlobalRollout = SetGlobalRolloutCommand(42)
 }
 
-class ToggleController(config: Config, provider: ToggleActorProvider) extends Controller with EventPublishing with Authentication {
+class ToggleController(config: Config, provider: ToggleActorProvider) extends Controller with EventPublishing with Authentication with Results with JsonResponses with ToggleActorResponses {
   import ToggleController._
 
   val AuthenticatedWithJson: ActionBuilder[AuthenticatedRequest] = ActionWithJson andThen Authenticate(config.auth)
