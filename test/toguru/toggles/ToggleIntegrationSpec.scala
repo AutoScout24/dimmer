@@ -111,6 +111,21 @@ class ToggleIntegrationSpec extends PlaySpec
       fetchToggle().rolloutPercentage mustBe Some(42)
     }
 
+    "reject a global rollout condition that is out of range" in {
+      // prepare
+      val body = """{"percentage": 101}"""
+
+      // execute
+      val updateResponse = await(requestWithApiKeyHeader(globalRolloutEndpoint).put(body))
+
+      // verify
+      updateResponse.status mustBe BAD_REQUEST
+      val json = Json.parse(updateResponse.body)
+      (json \ "status").asOpt[String] mustBe Some("Bad Request")
+
+      fetchToggle().rolloutPercentage mustBe Some(42)
+    }
+
     "delete a global rollout condition" in {
       // execute
       val createResponse = await(requestWithApiKeyHeader(globalRolloutEndpoint).delete())
@@ -183,9 +198,9 @@ class ToggleIntegrationSpec extends PlaySpec
   def namedKey[T](clazz: Class[T], name: String): BindingKey[T] =
     new BindingKey(clazz, Some(QualifierInstance(new NamedImpl(name))))
 
-  def verifyResponseIsOk(createResponse: WSResponse): Unit = {
-    createResponse.status mustBe OK
-    val json = Json.parse(createResponse.body)
+  def verifyResponseIsOk(response: WSResponse): Unit = {
+    response.status mustBe OK
+    val json = Json.parse(response.body)
     (json \ "status").asOpt[String] mustBe Some("Ok")
   }
 }

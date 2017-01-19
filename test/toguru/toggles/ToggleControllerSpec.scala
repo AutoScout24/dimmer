@@ -59,7 +59,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
 
       val controller = createController(props)
 
-      val result: Future[Result] = controller.get("toggle-id")().apply(authorizedRequest)
+      val result = controller.get("toggle-id")().apply(authorizedRequest)
 
       val bodyJson: JsValue = verifyStatus(result, 200, None)
       (bodyJson \ "name").asOpt[String] mustBe Some("toggle")
@@ -70,7 +70,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
       val controller = createController()
       val request = FakeRequest()
 
-      val result: Future[Result] = controller.get("toggle-id")().apply(request)
+      val result = controller.get("toggle-id")().apply(request)
 
       verifyStatus(result, 401, "Unauthorized")
     }
@@ -102,7 +102,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
       }))
       val request = authorizedRequest.withBody(CreateToggleCommand("toggle", "description", Map.empty))
 
-      val result: Future[Result] = controller.create().apply(request)
+      val result = controller.create().apply(request)
 
       val bodyJson: JsValue = verifyStatus(result, 200, "Ok")
       (bodyJson \ "id").asOpt[String] mustBe Some("toggle-id")
@@ -118,7 +118,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
       }))
       val request = authorizedRequest.withBody(updateToggle)
 
-      val result: Future[Result] = controller.update("toggle").apply(request)
+      val result = controller.update("toggle").apply(request)
 
       verifyStatus(result, 200, "Ok")
     }
@@ -127,7 +127,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
       val controller = createController()
       val request = FakeRequest().withBody(updateToggle)
 
-      val result: Future[Result] = controller.update("toggle").apply(request)
+      val result = controller.update("toggle").apply(request)
 
       verifyStatus(result, 401, "Unauthorized")
     }
@@ -149,7 +149,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
         def receive = { case _ => sender ! ToggleDoesNotExist("toggle") }
       }))
 
-      val result: Future[Result] = controller.delete("toggle").apply(authorizedRequest)
+      val result = controller.delete("toggle").apply(authorizedRequest)
 
       verifyStatus(result, 404, "Not found")
     }
@@ -170,7 +170,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
       }))
       val request = authorizedRequest.withBody(SetGlobalRolloutCommand(42))
 
-      val result: Future[Result] = controller.setGlobalRollout("toggle-id").apply(request)
+      val result = controller.setGlobalRollout("toggle-id").apply(request)
 
       verifyStatus(result, 200, "Ok")
     }
@@ -181,7 +181,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
       }))
       val request = authorizedRequest.withBody(SetGlobalRolloutCommand(42))
 
-      val result: Future[Result] = controller.setGlobalRollout("toggle-id").apply(request)
+      val result = controller.setGlobalRollout("toggle-id").apply(request)
 
       verifyStatus(result, 404, "Not found")
     }
@@ -190,7 +190,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
       val controller = createController()
       val request = FakeRequest().withBody(SetGlobalRolloutCommand(42))
 
-      val result: Future[Result] = controller.setGlobalRollout("toggle-id").apply(request)
+      val result = controller.setGlobalRollout("toggle-id").apply(request)
 
       verifyStatus(result, 401, "Unauthorized")
     }
@@ -202,7 +202,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
         def receive = { case _ => sender ! Success }
       }))
 
-      val result: Future[Result] = controller.deleteGlobalRollout("toggle-id")().apply(authorizedRequest)
+      val result = controller.deleteGlobalRollout("toggle-id")().apply(authorizedRequest)
 
       verifyStatus(result, 200, "Ok")
     }
@@ -210,7 +210,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
     "deny access when not api key given" in {
       val controller = createController()
 
-      val result: Future[Result] = controller.deleteGlobalRollout("toggle-id")().apply(FakeRequest())
+      val result = controller.deleteGlobalRollout("toggle-id")().apply(FakeRequest())
 
       verifyStatus(result, 401, "Unauthorized")
     }
