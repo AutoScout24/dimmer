@@ -8,10 +8,12 @@ import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import play.api.http.HeaderNames
 import toguru.app.Config
 import toguru.toggles.ToggleStateActor.GetState
 
 import scala.concurrent.duration._
+
 
 
 class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
@@ -31,19 +33,22 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
     new ToggleStateController(actor, config, counter)
   }
 
+  val toggles = Map(
+    "toggle-2" -> ToggleState("toggle-2", rolloutPercentage = Some(20)),
+    "toggle-1" -> ToggleState("toggle-1", Map("team" -> "Toguru team"))
+  )
+
+  def  toggleStateActorProps(toggles: Map[String,ToggleState]) =
+    Props(new Actor() { override def receive = { case GetState => sender ! toggles }})
+
+
   "get method" should {
     "return list of toggle states fetched from actor" in {
       // prepare
-      val toggles = Map(
-        "toggle-2" -> ToggleState("toggle-2", rolloutPercentage = Some(20)),
-        "toggle-1" -> ToggleState("toggle-1", Map("team" -> "Toguru team"))
-      )
 
       implicit val reads = Json.reads[ToggleState]
 
-      val controller: ToggleStateController = createController(Props(new Actor() {
-        override def receive = { case GetState => sender ! toggles }
-      }))
+      val controller: ToggleStateController = createController(toggleStateActorProps(toggles))
 
       val request = FakeRequest()
 
@@ -56,6 +61,30 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
       val state = contentAsJson(result).as[Seq[ToggleState]]
 
       state mustBe Seq(
+        toggles("toggle-1"),
+        toggles("toggle-2")
+      )
+    }
+
+    "return version specific format" in {
+      // prepare
+
+      implicit val toggleReads = Json.reads[ToggleState]
+
+      implicit val reads = Json.reads[ToggleStates]
+
+      val controller: ToggleStateController = createController(toggleStateActorProps(toggles))
+
+      val request = FakeRequest().withHeaders(HeaderNames.ACCEPT -> ToggleStateController.MimeApiV2)
+
+      // execute
+      val result = controller.get().apply(request)
+
+      // verify
+      status(result) mustBe 200
+      val states = contentAsJson(result).as[ToggleStates]
+
+      states.toggles mustBe Seq(
         toggles("toggle-1"),
         toggles("toggle-2")
       )

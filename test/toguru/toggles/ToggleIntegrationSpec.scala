@@ -5,7 +5,7 @@ import akka.pattern.ask
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.{OneServerPerSuite, PlaySpec}
 import play.api.inject.{BindingKey, QualifierInstance}
-import play.api.libs.json.{JsArray, Json}
+import play.api.libs.json.{JsArray, JsObject, Json}
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 import play.api.mvc.Results
 import play.api.test.Helpers._
@@ -47,6 +47,7 @@ class ToggleIntegrationSpec extends PlaySpec
     val wsClient = app.injector.instanceOf[WSClient]
 
     val validTestApiKeyHeader = HeaderNames.AUTHORIZATION -> s"${Authentication.ApiKeyPrefix} test-api-key"
+    val acceptApiV2Header = HeaderNames.ACCEPT -> ToggleStateController.MimeApiV2
 
     def requestWithApiKeyHeader(url: String): WSRequest =
       wsClient.url(url).withHeaders(validTestApiKeyHeader)
@@ -54,6 +55,8 @@ class ToggleIntegrationSpec extends PlaySpec
     def fetchToggleResponse() = await(requestWithApiKeyHeader(s"$toggleEndpointURL/$toggleId").get)
 
     def fetchToggle(): Toggle = Json.parse(fetchToggleResponse().body).as(ToggleController.toggleFormat)
+
+    def getActor(name: String): ActorRef = app.injector.instanceOf[ActorRef](namedKey(classOf[ActorRef], name))
 
     "deny access if no api key given" in {
       // prepare
@@ -140,7 +143,7 @@ class ToggleIntegrationSpec extends PlaySpec
       // prepare
       await(requestWithApiKeyHeader(toggleEndpointURL).post(toggleAsString("toggle 2")))
 
-      val actor = app.injector.instanceOf[ActorRef](namedKey(classOf[ActorRef], "toggle-state"))
+      val actor = getActor("toggle-state")
 
       waitFor(operationTimeout, checkEvery = 1.second) {
         val toggles = await((actor ? GetState).mapTo[Map[_,_]])
@@ -155,7 +158,27 @@ class ToggleIntegrationSpec extends PlaySpec
 
       val json = Json.parse(response.body)
       json mustBe a[JsArray]
-      json.asInstanceOf[JsArray].value.size == 2
+      json.asInstanceOf[JsArray].value must have size 2
+    }
+
+    "return current toggle state with APIv2" in {
+      // prepare
+      val actor = getActor("toggle-state")
+
+      waitFor(operationTimeout, checkEvery = 1.second) {
+        val toggles = await((actor ? GetState).mapTo[Map[_,_]])
+        toggles.size == 2
+      }
+
+      // execute
+      val response = await(requestWithApiKeyHeader(toggleStateEndpoint).withHeaders(acceptApiV2Header).get())
+
+      // verify
+      response.status mustBe OK
+
+      val json = Json.parse(response.body)
+      json mustBe a[JsObject]
+      (json \ "toggles").get.asInstanceOf[JsArray].value must have size 2
     }
 
     "allow to update toggle" in {
@@ -178,7 +201,7 @@ class ToggleIntegrationSpec extends PlaySpec
 
     "return current audit log" in {
       val auditLogSize = 7
-      val actor = app.injector.instanceOf[ActorRef](namedKey(classOf[ActorRef], "audit-log"))
+      val actor = getActor("audit-log")
 
       waitFor(operationTimeout, checkEvery = 1.second) {
         val log = await((actor ? GetLog).mapTo[Seq[_]])
