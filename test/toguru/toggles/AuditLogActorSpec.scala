@@ -4,8 +4,10 @@ import akka.pattern.ask
 import akka.actor.{ActorRef, Props}
 import toguru.toggles.events._
 import toguru.toggles.AuditLogActor._
+
 import scala.concurrent.duration._
 import AuditLog.Entry
+import akka.persistence.query.EventEnvelope
 
 class AuditLogActorSpec extends ActorSpec {
 
@@ -21,6 +23,9 @@ class AuditLogActorSpec extends ActorSpec {
 
   def createActor(events: Seq[Entry] = List.empty, time: Long = 0, retentionLength: Int = 10, retentionTime: FiniteDuration = 10.seconds): ActorRef =
     system.actorOf(Props(new AuditLogActor((_,_) => (), () => time, retentionTime, retentionLength, events)))
+
+  def sendEvents(actor: ActorRef) =
+    events.foreach(e => actor ! EventEnvelope(0, e.id, 0, e.event))
 
 
   "audit log actor" should {
@@ -38,7 +43,7 @@ class AuditLogActorSpec extends ActorSpec {
       val id1 = "toggle-1"
       val id2 = "toggle-2"
 
-      events.foreach(e => actor ! (e.id, e.event))
+      sendEvents(actor)
 
       val response = await(actor ? GetLog)
 
@@ -48,7 +53,7 @@ class AuditLogActorSpec extends ActorSpec {
     "truncate audit log on insertion" in {
       val actor = createActor(retentionLength = 3)
 
-      events.foreach(e => actor ! (e.id, e.event))
+      sendEvents(actor)
 
       val response = await(actor ? GetLog)
 

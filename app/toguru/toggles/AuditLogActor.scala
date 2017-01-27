@@ -4,6 +4,7 @@ import javax.inject.Inject
 
 import akka.actor.{Actor, ActorContext, ActorRef, Cancellable}
 import akka.persistence.jdbc.query.scaladsl.JdbcReadJournal
+import akka.persistence.query.EventEnvelope
 import toguru.logging.EventPublishing
 import toguru.toggles.AuditLog.Entry
 import toguru.toggles.AuditLogActor._
@@ -27,7 +28,7 @@ object AuditLogActor {
 }
 
 class AuditLogActor(
-        startHook: (ActorContext, ActorRef) => Unit,
+        startHook: ActorInitializer,
         val time: () => Long,
         val retentionTime: Duration,
         val retentionLength: Int,
@@ -56,7 +57,7 @@ class AuditLogActor(
       publisher.event("audit-actor-get-request", "logSize" -> log.size)
       sender ! log
 
-    case (id: String, e: ToggleEvent) =>
+    case EventEnvelope(_, id, _, e: ToggleEvent) =>
       publisher.event("audit-actor-toggle-event", "eventType" -> e.getClass.getSimpleName, "readJournalLatencyMs" -> latency(e.meta))
       log = Entry(id, e) +: log.take(retentionLength - 1)
 

@@ -39,7 +39,7 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
   )
 
   def  toggleStateActorProps(toggles: Map[String,ToggleState]) =
-    Props(new Actor() { override def receive = { case GetState => sender ! toggles }})
+    Props(new Actor() { override def receive = { case GetState => sender ! ToggleStates(0, toggles.values.to[Vector].sortBy(_.id))}})
 
 
   "get method" should {

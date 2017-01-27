@@ -2,6 +2,7 @@ package toguru.toggles
 
 import akka.pattern.ask
 import akka.actor.{ActorRef, Props}
+import akka.persistence.query.EventEnvelope
 import toguru.toggles.ToggleStateActor.GetState
 import toguru.toggles.events._
 
@@ -9,6 +10,8 @@ class ToggleStateActorSpec extends ActorSpec {
 
   def createActor(toggles: Map[String, ToggleState] = Map.empty): ActorRef =
     system.actorOf(Props(new ToggleStateActor((_,_) => (), toggles)))
+
+  def event(id: String, event: ToggleEvent) = EventEnvelope(0, id, 0, event)
 
   val toggles = Map(
     "toggle-1" -> ToggleState("toggle-1", Map("team" -> "Toguru team")),
@@ -21,7 +24,7 @@ class ToggleStateActorSpec extends ActorSpec {
 
       val response = await(actor ? GetState)
 
-      response mustBe toggles
+      response mustBe ToggleStates(0, toggles.values.to[Seq])
     }
 
     "build toggle state from events" in {
@@ -31,21 +34,33 @@ class ToggleStateActorSpec extends ActorSpec {
       val id2 = "toggle-2"
       val id3 = "toggle-3"
 
-      actor ! (id1, ToggleCreated("name", "description", Map("team" -> "Toguru team")))
-      actor ! (id1, GlobalRolloutCreated(10))
-      actor ! (id1, GlobalRolloutDeleted())
+      actor ! event(id1, ToggleCreated("name", "description", Map("team" -> "Toguru team")))
+      actor ! event(id1, GlobalRolloutCreated(10))
+      actor ! event(id1, GlobalRolloutDeleted())
 
-      actor ! (id2, ToggleCreated("name", "", Map.empty))
-      actor ! (id2, ToggleUpdated("name", "description", Map.empty))
-      actor ! (id2, GlobalRolloutCreated(10))
-      actor ! (id2, GlobalRolloutUpdated(20))
+      actor ! event(id2, ToggleCreated("name", "", Map.empty))
+      actor ! event(id2, ToggleUpdated("name", "description", Map.empty))
+      actor ! event(id2, GlobalRolloutCreated(10))
+      actor ! event(id2, GlobalRolloutUpdated(20))
 
-      actor ! (id3, ToggleCreated("name", "description", Map.empty))
-      actor ! (id3, ToggleDeleted())
+      actor ! event(id3, ToggleCreated("name", "description", Map.empty))
+      actor ! event(id3, ToggleDeleted())
 
       val response = await(actor ? GetState)
 
-      response mustBe toggles
+      response mustBe ToggleStates(0, toggles.values.to[Seq])
+
+    }
+
+    "returns correct sequence number" in {
+      val actor = createActor()
+
+      actor ! EventEnvelope(10, "toggle-1", 0, ToggleCreated("name", "description", Map("team" -> "Toguru team")))
+
+      val response = await(actor ? GetState)
+
+      response mustBe ToggleStates(10, Seq(ToggleState("toggle-1", Map("team" -> "Toguru team"))))
+
     }
   }
 }

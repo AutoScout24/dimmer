@@ -14,7 +14,7 @@ import toguru.app.Config
 import toguru.logging.EventPublishing
 import toguru.toggles.ToggleStateActor.GetState
 
-case class ToggleStates(sequenceNo: Int, toggles: Seq[ToggleState])
+
 
 object ToggleStateController {
   val MimeApiV2 = "application/vnd.toguru.v2+json"
@@ -40,14 +40,13 @@ class ToggleStateController(actor: ActorRef, config: Config, stateRequests: Coun
     stateRequests.inc()
 
     (actor ? GetState).map {
-      case m: Map[_, _] =>
-        val toggles = m.values.map(_.asInstanceOf[ToggleState]).to[Vector].sortBy(_.id)
-        Ok(jsonForRequest(request, toggles))
+      case m: ToggleStates =>
+        Ok(jsonForRequest(request, m))
     }.recover(serverError("get-toggle-state"))
   }
 
-  def jsonForRequest(request: Request[_], toggles: Seq[ToggleState]) = request match {
-    case Accepts.Json()    => Json.toJson(toggles)
-    case AcceptsToguruV2() => Json.toJson(ToggleStates(0, toggles))
+  def jsonForRequest(request: Request[_], toggleStates: ToggleStates) = request match {
+    case Accepts.Json()    => Json.toJson(toggleStates.toggles)
+    case AcceptsToguruV2() => Json.toJson(toggleStates)
   }
 }

@@ -146,8 +146,8 @@ class ToggleIntegrationSpec extends PlaySpec
       val actor = getActor("toggle-state")
 
       waitFor(operationTimeout, checkEvery = 1.second) {
-        val toggles = await((actor ? GetState).mapTo[Map[_,_]])
-        toggles.size == 2
+        val toggleStates = await((actor ? GetState).mapTo[ToggleStates])
+        toggleStates.toggles.size == 2
       }
 
       // execute
@@ -166,8 +166,8 @@ class ToggleIntegrationSpec extends PlaySpec
       val actor = getActor("toggle-state")
 
       waitFor(operationTimeout, checkEvery = 1.second) {
-        val toggles = await((actor ? GetState).mapTo[Map[_,_]])
-        toggles.size == 2
+        val toggleStates = await((actor ? GetState).mapTo[ToggleStates])
+        toggleStates.toggles.size == 2
       }
 
       // execute
