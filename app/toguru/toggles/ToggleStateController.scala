@@ -32,16 +32,19 @@ class ToggleStateController(actor: ActorRef, config: Config, stateRequests: Coun
   val AcceptsToguruV2 = Accepting(ToggleStateController.MimeApiV2)
 
 
-  def get = Action.async { request =>
-    Logger.info(s"REQUEST HEADERS: ${request.headers.toSimpleMap}")
+  def get(seqNo: Option[Long]) = Action.async { request =>
     import play.api.libs.concurrent.Execution.Implicits._
     implicit val timeout = Timeout(config.actorTimeout)
 
     stateRequests.inc()
 
     (actor ? GetState).map {
-      case m: ToggleStates =>
-        Ok(jsonForRequest(request, m))
+      case ts: ToggleStates if seqNo.exists(_ > ts.sequenceNo) =>
+        InternalServerError(errorJson("Internal Server Error",
+          "Server state is older than client state (seqNo in request is greater than server seqNo)",
+          "Wait until server replays state or query another server"))
+      case ts: ToggleStates =>
+        Ok(jsonForRequest(request, ts))
     }.recover(serverError("get-toggle-state"))
   }
 

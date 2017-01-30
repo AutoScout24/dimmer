@@ -39,7 +39,7 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
   )
 
   def  toggleStateActorProps(toggles: Map[String,ToggleState]) =
-    Props(new Actor() { override def receive = { case GetState => sender ! ToggleStates(0, toggles.values.to[Vector].sortBy(_.id))}})
+    Props(new Actor() { override def receive = { case GetState => sender ! ToggleStates(10, toggles.values.to[Vector].sortBy(_.id))}})
 
 
   "get method" should {
@@ -54,7 +54,7 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
 
 
       // execute
-      val result = controller.get().apply(request)
+      val result = controller.get(None).apply(request)
 
       // verify
       status(result) mustBe 200
@@ -78,7 +78,7 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
       val request = FakeRequest().withHeaders(HeaderNames.ACCEPT -> ToggleStateController.MimeApiV2)
 
       // execute
-      val result = controller.get().apply(request)
+      val result = controller.get(Some(9)).apply(request)
 
       // verify
       status(result) mustBe 200
@@ -88,6 +88,20 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
         toggles("toggle-1"),
         toggles("toggle-2")
       )
+    }
+
+    "return Internal Server Error if seqNo is newer than server seqNo" in {
+      // prepare
+
+      val controller: ToggleStateController = createController(toggleStateActorProps(toggles))
+
+      val request = FakeRequest().withHeaders(HeaderNames.ACCEPT -> ToggleStateController.MimeApiV2)
+
+      // execute
+
+      val result = controller.get(Some(11)).apply(request)
+
+      status(result) mustBe 500
     }
   }
 }

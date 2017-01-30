@@ -19,6 +19,6 @@ PUT        /toggle/:id/globalrollout   @toguru.toggles.ToggleController.setGloba
 
 DELETE     /toggle/:id/globalrollout   @toguru.toggles.ToggleController.deleteGlobalRollout(id: String)
 
-GET        /togglestate                @toguru.toggles.ToggleStateController.get
+GET        /togglestate                @toguru.toggles.ToggleStateController.get(seqNo: Option[Long])
 
 GET        /auditlog                   @toguru.toggles.AuditLogController.get

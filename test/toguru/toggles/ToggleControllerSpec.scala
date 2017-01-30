@@ -93,6 +93,14 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
 
       verifyStatus(result, 404, "Not found")
     }
+
+    "reject bad accept header" in {
+      val controller = createController()
+      val request = FakeRequest().withHeaders(HeaderNames.ACCEPT -> "application/bad-request-no-json-test")
+      val result = controller.get("toggle-id")().apply(request)
+
+      status(result) mustBe BAD_REQUEST
+    }
   }
 
   "create method" should {
