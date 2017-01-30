@@ -7,7 +7,6 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.codahale.metrics.Counter
 import com.kenshoo.play.metrics.Metrics
-import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc._
 import toguru.app.Config
@@ -30,7 +29,6 @@ class ToggleStateController(actor: ActorRef, config: Config, stateRequests: Coun
   implicit val toggleStateWriter = Json.writes[ToggleState]
   implicit val toggleStatesWriter = Json.writes[ToggleStates]
   val AcceptsToguruV2 = Accepting(ToggleStateController.MimeApiV2)
-
 
   def get(seqNo: Option[Long]) = Action.async { request =>
     import play.api.libs.concurrent.Execution.Implicits._

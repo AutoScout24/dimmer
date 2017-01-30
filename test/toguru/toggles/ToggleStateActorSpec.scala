@@ -49,7 +49,6 @@ class ToggleStateActorSpec extends ActorSpec {
       val response = await(actor ? GetState)
 
       response mustBe ToggleStates(0, toggles.values.to[Seq])
-
     }
 
     "returns correct sequence number" in {
@@ -60,7 +59,6 @@ class ToggleStateActorSpec extends ActorSpec {
       val response = await(actor ? GetState)
 
       response mustBe ToggleStates(10, Seq(ToggleState("toggle-1", Map("team" -> "Toguru team"))))
-
     }
   }
 }

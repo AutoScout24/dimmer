@@ -1,10 +1,9 @@
 package toguru.toggles
 
-import play.api.Logger
 import play.api.http.{HeaderNames, MimeTypes}
 import play.api.libs.json._
-import play.api.mvc._
 import play.api.mvc.Results._
+import play.api.mvc._
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -76,7 +75,6 @@ trait JsonResponses extends ResultPublishing {
       }
     }
   }
-
 
   val ActionWithJson = Action andThen OnlyJson
 }

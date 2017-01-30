@@ -1,13 +1,13 @@
 package toguru.toggles
 
-import akka.pattern.ask
 import akka.actor.{ActorRef, Props}
-import toguru.toggles.events._
+import akka.pattern.ask
+import akka.persistence.query.EventEnvelope
+import toguru.toggles.AuditLog.Entry
 import toguru.toggles.AuditLogActor._
+import toguru.toggles.events._
 
 import scala.concurrent.duration._
-import AuditLog.Entry
-import akka.persistence.query.EventEnvelope
 
 class AuditLogActorSpec extends ActorSpec {
 
@@ -26,7 +26,6 @@ class AuditLogActorSpec extends ActorSpec {
 
   def sendEvents(actor: ActorRef) =
     events.foreach(e => actor ! EventEnvelope(0, e.id, 0, e.event))
-
 
   "audit log actor" should {
     "return current audit log" in {
