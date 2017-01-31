@@ -3,13 +3,16 @@ package toguru.toggles
 import akka.pattern.ask
 import akka.actor.{ActorRef, Props}
 import akka.persistence.query.EventEnvelope
-import toguru.toggles.ToggleStateActor.GetState
+import toguru.toggles.ToggleStateActor.{GetState, ToggleStateInitializing}
 import toguru.toggles.events._
 
-class ToggleStateActorSpec extends ActorSpec {
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
-  def createActor(toggles: Map[String, ToggleState] = Map.empty): ActorRef =
-    system.actorOf(Props(new ToggleStateActor((_,_) => (), toggles)))
+class ToggleStateActorSpec extends ActorSpec with WaitFor {
+
+  def createActor(toggles: Map[String, ToggleState] = Map.empty, maxSequenceNo: Long = 0, initialize: Boolean = false): ActorRef =
+    system.actorOf(Props(new ToggleStateActor((_,_) => (), (_,_) => Future.successful(maxSequenceNo), ToggleState.Config(initialize), toggles)))
 
   def event(id: String, event: ToggleEvent) = EventEnvelope(0, id, 0, event)
 
@@ -59,6 +62,28 @@ class ToggleStateActorSpec extends ActorSpec {
       val response = await(actor ? GetState)
 
       response mustBe ToggleStates(10, Seq(ToggleState("toggle-1", Map("team" -> "Toguru team"))))
+    }
+
+    "start in initializing state" in {
+      val actor = createActor(maxSequenceNo = 10, initialize = true)
+
+      val response = await(actor ? GetState)
+
+      response mustBe ToggleStateInitializing
+    }
+
+    "switch to initialized state after replaying all events" in {
+      val actor = createActor(maxSequenceNo = 10, initialize = true)
+
+      actor ! EventEnvelope(10, "toggle-1", 0, ToggleCreated("name", "", Map.empty))
+
+      waitFor(10.seconds) {
+        await(actor ? GetState) != ToggleStateInitializing
+      }
+
+      val response = await(actor ? GetState)
+
+      response mustBe ToggleStates(10, Seq(ToggleState("toggle-1", Map.empty)))
     }
   }
 }

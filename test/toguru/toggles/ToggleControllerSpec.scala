@@ -35,6 +35,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
       val actorTimeout: FiniteDuration = 50.millis
       override def auth = authConfig
       override def auditLog = AuditLog.Config()
+      override def toggleState = ToggleState.Config()
     }
 
     new ToggleController(config, factory)

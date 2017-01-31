@@ -11,6 +11,7 @@ The toggle guru (Japanese for toggle).
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
+
 - [Contributing](#contributing)
 - [Management API](#management-api)
   - [Authentication](#authentication)
@@ -22,12 +23,16 @@ The toggle guru (Japanese for toggle).
   - [Getting Toggle Data](#getting-toggle-data)
   - [Change Toggle Rollout Percentage](#change-toggle-rollout-percentage)
   - [Disabling a Toggle](#disabling-a-toggle)
+- [Configuration](#configuration)
+  - [Togglestate Endpoint Initialization](#togglestate-endpoint-initialization)
 - [Related projects](#related-projects)
 - [License](#license)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Contributing
+
+Contributions are welcome!
 
 See [contribution documentation](CONTRIBUTING.md).
 
@@ -194,6 +199,20 @@ curl example:
 curl -XDELETE https://your-endpoint.example.com/toggle/toguru-demo-toggle/globalrollout
 ```
 
+## Configuration
+
+### Togglestate Endpoint Initialization 
+
+When starting a toguru server, the toggle state endpoint will initially return
+an outdated toggle state. This is because the ToggleState actor needs to
+replay all toggle state changes before it is serving the recent toggle state.
+
+In order to prevent serving this stale state, the configuration setting
+`toggleState.initializeOnStartup` is set to `true` by default. This setting 
+also causes the health check to fail until the toggle state endpoint is fully
+initialized.
+
+To switch both behaviours off, set `toggleState.initializeOnStartup` to `false`.
 
 ## Related projects
 

@@ -9,7 +9,7 @@ import com.google.inject.{AbstractModule, Provides}
 import play.api.libs.concurrent.AkkaGuiceSupport
 import slick.backend.DatabaseConfig
 import slick.driver.JdbcDriver
-import toguru.toggles.{AuditLog, AuditLogActor, ToggleStateActor}
+import toguru.toggles.{AuditLog, AuditLogActor, ToggleState, ToggleStateActor}
 
 class ToguruModule extends AbstractModule with AkkaGuiceSupport {
 
@@ -24,6 +24,9 @@ class ToguruModule extends AbstractModule with AkkaGuiceSupport {
 
   @Provides @Singleton
   def auditLogConfig(config: Config): AuditLog.Config = config.auditLog
+
+  @Provides @Singleton
+  def toggleStateConfig(config: Config): ToggleState.Config = config.toggleState
 
   @Provides @Singleton
   def dbConfig: DatabaseConfig[JdbcDriver] = DatabaseConfig.forConfig("slick")

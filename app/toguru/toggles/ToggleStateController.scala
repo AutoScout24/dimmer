@@ -11,7 +11,7 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import toguru.app.Config
 import toguru.logging.EventPublishing
-import toguru.toggles.ToggleStateActor.GetState
+import toguru.toggles.ToggleStateActor.{GetState, ToggleStateInitializing}
 
 
 
@@ -30,9 +30,10 @@ class ToggleStateController(actor: ActorRef, config: Config, stateRequests: Coun
   implicit val toggleStatesWriter = Json.writes[ToggleStates]
   val AcceptsToguruV2 = Accepting(ToggleStateController.MimeApiV2)
 
+  implicit val timeout = Timeout(config.actorTimeout)
+
   def get(seqNo: Option[Long]) = Action.async { request =>
     import play.api.libs.concurrent.Execution.Implicits._
-    implicit val timeout = Timeout(config.actorTimeout)
 
     stateRequests.inc()
 
@@ -43,6 +44,10 @@ class ToggleStateController(actor: ActorRef, config: Config, stateRequests: Coun
           "Wait until server replays state or query another server"))
       case ts: ToggleStates =>
         Ok(jsonForRequest(request, ts))
+      case ToggleStateInitializing =>
+        InternalServerError(errorJson("Internal Server Error",
+        "Server is currently initializing",
+        "Please wait until server has completed initialization"))
     }.recover(serverError("get-toggle-state"))
   }
 

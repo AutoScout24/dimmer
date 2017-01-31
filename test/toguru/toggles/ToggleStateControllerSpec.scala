@@ -10,7 +10,8 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import toguru.app.Config
-import toguru.toggles.ToggleStateActor.GetState
+import toguru.toggles.ToggleStateActor.{GetState, ToggleStateInitializing}
+
 import scala.concurrent.duration._
 
 class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
@@ -21,6 +22,7 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
       override val typesafeConfig = mock[TypesafeConfig]
       override def auth = Authentication.Config(Seq.empty, disabled = false)
       override def auditLog = AuditLog.Config()
+      override def toggleState = ToggleState.Config()
     }
 
     val system = ActorSystem()
@@ -91,6 +93,19 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
 
       // execute
       val result = controller.get(Some(11)).apply(request)
+
+      status(result) mustBe 500
+    }
+
+    "return Internal Server Error if toggle state actor responds with initializing" in {
+      // prepare
+      val initializingActor = Props(new Actor() { override def receive = { case GetState => sender ! ToggleStateInitializing }})
+      val controller: ToggleStateController = createController(initializingActor)
+
+      val request = FakeRequest().withHeaders(HeaderNames.ACCEPT -> ToggleStateController.MimeApiV2)
+
+      // execute
+      val result = controller.get(Some(10)).apply(request)
 
       status(result) mustBe 500
     }

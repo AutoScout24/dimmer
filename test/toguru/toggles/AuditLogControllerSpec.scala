@@ -27,6 +27,7 @@ class AuditLogControllerSpec extends PlaySpec with MockitoSugar with Authorizati
       override val typesafeConfig = mock[TypesafeConfig]
       override def auth = authConfig
       override def auditLog = AuditLog.Config()
+      override def toggleState = ToggleState.Config()
     }
 
     val system = ActorSystem()

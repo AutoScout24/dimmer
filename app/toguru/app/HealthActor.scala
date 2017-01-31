@@ -1,28 +1,36 @@
 package toguru.app
 
-import java.util.concurrent.TimeoutException
-import javax.inject.Inject
+import javax.inject.{Inject, Named}
 
-import akka.actor.Actor
-import akka.pattern.after
-import toguru.app.HealthActor.{CheckHealth, GetHealth, HealthStatus}
+import akka.actor.{Actor, ActorRef}
+import akka.pattern.ask
+import akka.util.Timeout
 import slick.backend.DatabaseConfig
 import slick.driver.JdbcDriver
+import toguru.app.HealthActor.{CheckHealth, GetHealth, HealthStatus}
+import toguru.helpers.FutureTimeout
+import toguru.toggles.ToggleStateActor.GetState
+import toguru.toggles.ToggleStates
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
 
 object HealthActor {
 
   case class CheckHealth()
   case class GetHealth()
-  case class HealthStatus(isDatabaseHealthy: Boolean)
+  case class HealthStatus(databaseHealthy: Boolean, toggleStateHealthy: Boolean) {
+    val healthy = databaseHealthy && toggleStateHealthy
+  }
 }
 
 
-class HealthActor @Inject() (dbConfig: DatabaseConfig[JdbcDriver]) extends Actor  {
+class HealthActor @Inject() (dbConfig: DatabaseConfig[JdbcDriver], @Named("toggle-state") toggleState: ActorRef, config: Config) extends Actor with FutureTimeout {
 
   var databaseHealthy: Boolean = false
+
+  var toggleStateHealthy: Boolean = false
+
+  implicit val actorTimeout = Timeout(config.actorTimeout)
 
   val repeatedlyHealthCheck = {
     implicit val ec = context.system.dispatcher
@@ -34,20 +42,22 @@ class HealthActor @Inject() (dbConfig: DatabaseConfig[JdbcDriver]) extends Actor
 
   def checkHealth(): Unit = {
     import dbConfig.driver.api._
-    implicit val ec: ExecutionContext = context.system.dispatcher
+    implicit val ec = context.dispatcher
+    implicit val scheduler = context.system.scheduler
 
-    def timeout[T](future: Future[T]): Future[T] = {
-      val timeoutFuture = after(500.milliseconds, context.system.scheduler) { Future.failed(new TimeoutException()) }
-      Future.firstCompletedOf(List(future, timeoutFuture))
-    }
-
-    timeout(dbConfig.db.run(sql"""SELECT 1""".as[Int].head))
+    timeout(500.millis, dbConfig.db.run(sql"""SELECT 1""".as[Int].head))
       .map(result => databaseHealthy = result == 1)
       .recover { case _ => databaseHealthy = false }
+
+
+    (toggleState ? GetState).map {
+      case _ : ToggleStates => toggleStateHealthy = true
+      case _ => toggleStateHealthy = false
+    }.recover { case _ => toggleStateHealthy = false }
   }
 
   override def receive = {
     case CheckHealth() => checkHealth()
-    case GetHealth() => sender ! HealthStatus(databaseHealthy)
+    case GetHealth() => sender ! HealthStatus(databaseHealthy, toggleStateHealthy)
   }
 }

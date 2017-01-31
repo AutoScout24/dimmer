@@ -16,28 +16,30 @@ class ApplicationSpec extends PlaySpec with Results {
 
     val controller = createAppController()
     val result = controller.healthCheck().apply(FakeRequest(GET, "/healthcheck"))
-    val bodyText = contentAsString(result)
-    bodyText mustBe "Ok"
+    val bodyJson = contentAsJson(result)
+    (bodyJson \ "databaseHealthy").as[Boolean] mustBe true
+    (bodyJson \ "toggleStateHealthy").as[Boolean] mustBe true
   }
 
   "ready check should return ok" in {
 
     val controller = createAppController()
     val result = controller.readyCheck().apply(FakeRequest(GET, "/readycheck"))
-    val bodyText = contentAsString(result)
-    bodyText mustBe "Ok"
+    val bodyJson = contentAsJson(result)
+    (bodyJson \ "databaseHealthy").as[Boolean] mustBe true
+    (bodyJson \ "toggleStateHealthy").as[Boolean] mustBe true
   }
 
   "ready check should return database not available" in {
     val controller = createAppController(
-      Props(new Actor { def receive = { case _ => sender ! HealthStatus(false) } })
+      Props(new Actor { def receive = { case _ => sender ! HealthStatus(false, true) } })
     )
     val result = controller.readyCheck().apply(FakeRequest(GET, "/readycheck"))
-    val bodyText = contentAsString(result)
-    bodyText mustBe "Database not available"
+    val bodyJson = contentAsJson(result)
+    (bodyJson \ "databaseHealthy").as[Boolean] mustBe false
   }
 
-  val healthyProps = Props(new Actor { def receive = { case _ => sender ! HealthStatus(true) } })
+  val healthyProps = Props(new Actor { def receive = { case _ => sender ! HealthStatus(true, true) } })
 
   def createAppController(props: Props =  healthyProps): Application =
     new Application(ActorSystem().actorOf(props))

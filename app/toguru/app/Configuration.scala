@@ -6,7 +6,7 @@ import javax.inject.{Inject, Singleton}
 
 import com.typesafe.config.{ConfigList, ConfigObject, Config => TypesafeConfig}
 import play.api.Logger
-import toguru.toggles.{AuditLog, Authentication}
+import toguru.toggles.{AuditLog, Authentication, ToggleState}
 import toguru.toggles.Authentication.ApiKey
 
 import scala.concurrent.duration._
@@ -20,6 +20,8 @@ trait Config {
   val typesafeConfig: TypesafeConfig
 
   val actorTimeout: FiniteDuration
+
+  def toggleState: ToggleState.Config
 
   def auditLog: AuditLog.Config
 }
@@ -37,6 +39,11 @@ class Configuration @Inject() (playConfig: play.api.Configuration) extends Confi
     val retentionTime   = playConfig.getMilliseconds("auditLog.retentionTime").getOrElse(90.days.toMillis).milliseconds
     val retentionLength = playConfig.getInt("auditLog.retentionLength").getOrElse(10000)
     AuditLog.Config(retentionTime, retentionLength)
+  }
+
+  override val toggleState = {
+    val initialize = playConfig.getBoolean("toggleState.initializeOnStartup").getOrElse(false)
+    ToggleState.Config(initialize)
   }
 
   override val auth = {

@@ -15,9 +15,9 @@ import play.mvc.Http.HeaderNames
 import toguru.app.Config
 import toguru.helpers.PostgresSetup
 import toguru.toggles.AuditLogActor.GetLog
-import toguru.toggles.ToggleStateActor.GetState
+import toguru.toggles.ToggleStateActor.{GetState, ToggleStateInitializing}
 
-import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.duration._
 
 
 class ToggleIntegrationSpec extends PlaySpec
@@ -33,6 +33,20 @@ class ToggleIntegrationSpec extends PlaySpec
 
   def toggleAsString(name: String) =
     s"""{"name" : "$name", "description" : "toggle description", "tags" : {"team" : "Toguru team"}}"""
+
+  "Applicatin health check" should {
+    "eventually return healthy" in {
+      waitForPostgres()
+      val healthURL = s"http://localhost:$port/healthcheck"
+      val wsClient = app.injector.instanceOf[WSClient]
+
+      waitFor(10.seconds, 1.seconds) {
+        await(wsClient.url(healthURL).get()).status == 200
+      }
+
+      await(wsClient.url(healthURL).get()).status mustBe 200
+    }
+  }
 
   "Toggle API" should {
     val name = "toggle 1"
@@ -139,16 +153,21 @@ class ToggleIntegrationSpec extends PlaySpec
       fetchToggle().rolloutPercentage mustBe None
     }
 
+    def waitForToggleStates(actor: ActorRef) =
+      waitFor(operationTimeout, checkEvery = 1.second) {
+        await(actor ? GetState) match {
+          case ToggleStates(_, toggles) => toggles.size == 2
+          case ToggleStateInitializing  => false
+        }
+      }
+
     "return current toggle state" in {
       // prepare
       await(requestWithApiKeyHeader(toggleEndpointURL).post(toggleAsString("toggle 2")))
 
       val actor = getActor("toggle-state")
 
-      waitFor(operationTimeout, checkEvery = 1.second) {
-        val toggleStates = await((actor ? GetState).mapTo[ToggleStates])
-        toggleStates.toggles.size == 2
-      }
+      waitForToggleStates(actor)
 
       // execute
       val response = await(requestWithApiKeyHeader(toggleStateEndpoint).get())
@@ -165,10 +184,7 @@ class ToggleIntegrationSpec extends PlaySpec
       // prepare
       val actor = getActor("toggle-state")
 
-      waitFor(operationTimeout, checkEvery = 1.second) {
-        val toggleStates = await((actor ? GetState).mapTo[ToggleStates])
-        toggleStates.toggles.size == 2
-      }
+      waitForToggleStates(actor)
 
       // execute
       val response = await(requestWithApiKeyHeader(toggleStateEndpoint).withHeaders(acceptApiV2Header).get())
