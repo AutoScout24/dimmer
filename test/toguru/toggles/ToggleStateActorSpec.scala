@@ -3,7 +3,7 @@ package toguru.toggles
 import akka.pattern.ask
 import akka.actor.{ActorRef, Props}
 import akka.persistence.query.EventEnvelope
-import toguru.toggles.ToggleStateActor.{GetState, ToggleStateInitializing}
+import toguru.toggles.ToggleStateActor.{GetSeqNo, GetState, ToggleStateInitializing}
 import toguru.toggles.events._
 
 import scala.concurrent.Future
@@ -64,12 +64,24 @@ class ToggleStateActorSpec extends ActorSpec with WaitFor {
       response mustBe ToggleStates(10, Seq(ToggleState("toggle-1", Map("team" -> "Toguru team"))))
     }
 
+    "returns correct sequence number when receiving GetSeqNo" in {
+      val actor = createActor()
+
+      actor ! EventEnvelope(10, "toggle-1", 0, ToggleCreated("name", "description", Map("team" -> "Toguru team")))
+
+      val response = await(actor ? GetSeqNo)
+
+      response mustBe 10
+    }
+
     "start in initializing state" in {
       val actor = createActor(maxSequenceNo = 10, initialize = true)
 
-      val response = await(actor ? GetState)
+      val getStateResponse = await(actor ? GetState)
+      val getSeqNoResponse = await(actor ? GetSeqNo)
 
-      response mustBe ToggleStateInitializing
+      getStateResponse mustBe ToggleStateInitializing
+      getSeqNoResponse mustBe ToggleStateInitializing
     }
 
     "switch to initialized state after replaying all events" in {
