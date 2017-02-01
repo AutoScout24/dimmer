@@ -34,10 +34,24 @@ class ToggleIntegrationSpec extends PlaySpec
   def toggleAsString(name: String) =
     s"""{"name" : "$name", "description" : "toggle description", "tags" : {"team" : "Toguru team"}}"""
 
-  "Applicatin health check" should {
+  "Application health check" should {
     "eventually return healthy" in {
       waitForPostgres()
       val healthURL = s"http://localhost:$port/healthcheck"
+      val wsClient = app.injector.instanceOf[WSClient]
+
+      waitFor(10.seconds, 1.seconds) {
+        await(wsClient.url(healthURL).get()).status == 200
+      }
+
+      await(wsClient.url(healthURL).get()).status mustBe 200
+    }
+  }
+
+  "Application ready check" should {
+    "eventually return healthy" in {
+      waitForPostgres()
+      val healthURL = s"http://localhost:$port/readycheck"
       val wsClient = app.injector.instanceOf[WSClient]
 
       waitFor(10.seconds, 1.seconds) {

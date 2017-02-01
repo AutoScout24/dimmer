@@ -14,7 +14,7 @@ import toguru.toggles.{AuditLog, AuditLogActor, ToggleState, ToggleStateActor}
 class ToguruModule extends AbstractModule with AkkaGuiceSupport {
 
   def configure() = {
-    bind(classOf[JmxReportingSetup]).asEagerSingleton()
+    bind(classOf[ToguruServerMetrics]).asEagerSingleton()
     bind(classOf[Config]).to(classOf[Configuration]).asEagerSingleton()
 
     bindActor[HealthActor]("health")

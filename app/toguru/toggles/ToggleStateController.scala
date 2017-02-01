@@ -19,12 +19,12 @@ object ToggleStateController {
   val MimeApiV2 = "application/vnd.toguru.v2+json"
 }
 
-class ToggleStateController(actor: ActorRef, config: Config, stateRequests: Counter)
+class ToggleStateController(actor: ActorRef, config: Config, stateRequests: Counter, stateStaleErrors: Counter)
   extends Controller with EventPublishing with JsonResponses {
 
   @Inject()
   def this(@Named("toggle-state") actor: ActorRef, config: Config, metrics: Metrics) =
-    this(actor, config, metrics.defaultRegistry.counter("state-requests"))
+    this(actor, config, metrics.defaultRegistry.counter("state-requests"), metrics.defaultRegistry.counter("state-stale-errors"))
 
   implicit val toggleStateWriter = Json.writes[ToggleState]
   implicit val toggleStatesWriter = Json.writes[ToggleStates]
@@ -39,6 +39,7 @@ class ToggleStateController(actor: ActorRef, config: Config, stateRequests: Coun
 
     (actor ? GetState).map {
       case ts: ToggleStates if seqNo.exists(_ > ts.sequenceNo) =>
+        stateStaleErrors.inc()
         InternalServerError(errorJson("Internal Server Error",
           "Server state is older than client state (seqNo in request is greater than server seqNo)",
           "Wait until server replays state or query another server"))

@@ -17,8 +17,8 @@ class Filters @Inject()(gzip: GzipFilter, counter: ErrorCounterFilter) extends H
 
 class ErrorCounterFilter @Inject() (implicit val mat: Materializer, ec: ExecutionContext, metrics: Metrics) extends Filter {
 
-  val serverErrors = metrics.defaultRegistry.counter("serverErrors")
-  val clientErrors = metrics.defaultRegistry.counter("clientErrors")
+  val serverErrors = metrics.defaultRegistry.counter("server-errors")
+  val clientErrors = metrics.defaultRegistry.counter("client-errors")
 
   def apply(nextFilter: RequestHeader => Future[Result])(requestHeader: RequestHeader): Future[Result] =
     nextFilter(requestHeader).andThen {

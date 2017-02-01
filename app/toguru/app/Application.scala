@@ -27,8 +27,10 @@ class Application @Inject() (@Named("health") healthActor: ActorRef) extends Con
       .map(toResponse(databaseUnavailableStatus))
   }
 
-  private def toResponse(databaseUnavailableStatus: Status)(health: HealthStatus): Result = {
-    val content = Json.obj("databaseHealthy" -> health.databaseHealthy, "toggleStateHealthy" -> health.toggleStateHealthy)
-    if (health.healthy) Ok(content) else databaseUnavailableStatus(content)
+  implicit val healthWrites = Json.writes[HealthStatus]
+
+  private def toResponse(unhealthyStatus: Status)(health: HealthStatus): Result = {
+    val content = Json.toJson(health)
+    if (health.healthy) Ok(content) else unhealthyStatus(content)
   }
 }

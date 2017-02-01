@@ -29,7 +29,7 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
     val actor = system.actorOf(props)
     val counter = mock[Counter]
 
-    new ToggleStateController(actor, config, counter)
+    new ToggleStateController(actor, config, counter, counter)
   }
 
   val toggles = Map(

@@ -24,6 +24,7 @@ object ToggleState {
 object ToggleStateActor {
   case object Shutdown
   case object GetState
+  case object GetSeqNo
   case object ToggleStateInitializing
   case object CheckSequenceNo
   case class DbSequenceNo(sequenceNo: Long)
@@ -86,6 +87,8 @@ class ToggleStateActor(
   def initializing: Receive = {
     case GetState => sender ! ToggleStateInitializing
 
+    case GetSeqNo => sender ! ToggleStateInitializing
+
     case CheckSequenceNo =>
       implicit val ec = context.dispatcher
       sequenceNoProvider(context.system.scheduler, context.dispatcher).map(seqNo => self ! DbSequenceNo(seqNo))
@@ -98,8 +101,9 @@ class ToggleStateActor(
   }
 
   def initialized: Receive = {
-    case GetState =>
-      sender ! ToggleStates(lastSequenceNo, toggles.values.to[Vector].sortBy(_.id))
+    case GetState => sender ! ToggleStates(lastSequenceNo, toggles.values.to[Vector].sortBy(_.id))
+
+    case GetSeqNo => sender ! lastSequenceNo
   }
 
   def latency(meta: Option[Metadata]): Long = meta.map(m => System.currentTimeMillis - m.time).getOrElse(0)
