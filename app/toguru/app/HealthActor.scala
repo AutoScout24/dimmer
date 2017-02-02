@@ -19,7 +19,9 @@ object HealthActor {
   case class CheckHealth()
   case class GetHealth()
   case class HealthStatus(databaseHealthy: Boolean, toggleStateHealthy: Boolean) {
-    val healthy = databaseHealthy && toggleStateHealthy
+    val ready = databaseHealthy && toggleStateHealthy
+
+    val healthy = toggleStateHealthy
   }
 }
 

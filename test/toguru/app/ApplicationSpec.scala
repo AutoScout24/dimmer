@@ -12,31 +12,54 @@ import scala.concurrent.Future
 
 class ApplicationSpec extends PlaySpec with Results {
 
-  "health check should return ok" in {
+  "health check" should {
+    "return ok if DB and toggle state healthy" in {
+      val controller = createAppController()
 
-    val controller = createAppController()
-    val result = controller.healthCheck().apply(FakeRequest(GET, "/healthcheck"))
-    val bodyJson = contentAsJson(result)
-    (bodyJson \ "databaseHealthy").as[Boolean] mustBe true
-    (bodyJson \ "toggleStateHealthy").as[Boolean] mustBe true
+      val result = controller.healthCheck().apply(FakeRequest())
+
+      val bodyJson = contentAsJson(result)
+      status(result) mustBe 200
+      (bodyJson \ "databaseHealthy").as[Boolean] mustBe true
+      (bodyJson \ "toggleStateHealthy").as[Boolean] mustBe true
+    }
+
+    "return server eror when toggle state unhealthy" in {
+      val controller = createAppController(
+        Props(new Actor { def receive = { case _ => sender ! HealthStatus(true, false) } })
+      )
+
+      val result = controller.healthCheck().apply(FakeRequest())
+
+      val bodyJson = contentAsJson(result)
+      status(result) mustBe 500
+      (bodyJson \ "toggleStateHealthy").as[Boolean] mustBe false
+    }
   }
 
-  "ready check should return ok" in {
+  "ready check" should {
+    "return ok if DB and toggle state healthy" in {
+      val controller = createAppController()
 
-    val controller = createAppController()
-    val result = controller.readyCheck().apply(FakeRequest(GET, "/readycheck"))
-    val bodyJson = contentAsJson(result)
-    (bodyJson \ "databaseHealthy").as[Boolean] mustBe true
-    (bodyJson \ "toggleStateHealthy").as[Boolean] mustBe true
-  }
+      val result = controller.readyCheck().apply(FakeRequest())
 
-  "ready check should return database not available" in {
-    val controller = createAppController(
-      Props(new Actor { def receive = { case _ => sender ! HealthStatus(false, true) } })
-    )
-    val result = controller.readyCheck().apply(FakeRequest(GET, "/readycheck"))
-    val bodyJson = contentAsJson(result)
-    (bodyJson \ "databaseHealthy").as[Boolean] mustBe false
+      val bodyJson = contentAsJson(result)
+      status(result) mustBe 200
+      (bodyJson \ "databaseHealthy").as[Boolean] mustBe true
+      (bodyJson \ "toggleStateHealthy").as[Boolean] mustBe true
+    }
+
+    "return server error when database unhealthy" in {
+      val controller = createAppController(
+        Props(new Actor { def receive = { case _ => sender ! HealthStatus(false, true) } })
+      )
+
+      val result = controller.readyCheck().apply(FakeRequest())
+
+      val bodyJson = contentAsJson(result)
+      status(result) mustBe 500
+      (bodyJson \ "databaseHealthy").as[Boolean] mustBe false
+    }
   }
 
   val healthyProps = Props(new Actor { def receive = { case _ => sender ! HealthStatus(true, true) } })
