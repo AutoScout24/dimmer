@@ -35,20 +35,17 @@ trait Authentication {
 
   object Authenticate {
 
-    def apply[R[_] <: Request[_]](config: Config): Refiner[R] = new Refiner[R] {
+    def apply[T, R[T] <: Request[T]](config: Config): Refiner[R] = new Refiner[R] {
 
-      override protected def refine[A](r: R[A]): Future[Either[Result, AuthenticatedRequest[A]]] = {
-        // type inference can't establish R[A] <: Request[A] here - this cast might be actually unsound.
-        val request = r.asInstanceOf[Request[A]]
-        extractPrincipal(config, request) match {
-          case Some(p) => Future.successful(Right(new AuthenticatedRequest(p, request)))
-          case None    => Future.successful(Left(unauthorizedResponse(request)))
+      override protected def refine[A](r: R[A]): Future[Either[Result, AuthenticatedRequest[A]]] =
+        extractPrincipal(config, r) match {
+          case Some(p) => Future.successful(Right(new AuthenticatedRequest(p, r)))
+          case None    => Future.successful(Left(unauthorizedResponse))
         }
-      }
     }
   }
 
-  def extractPrincipal[A](config: Config, request: RequestHeader): Option[Principal] = {
+  def extractPrincipal[A](config: Config, request: Request[A]): Option[Principal] = {
     def toPrincipal: String => Option[Principal] = {
 
       case ApiKeyRegex(key) =>
@@ -66,7 +63,7 @@ trait Authentication {
       maybeHeader.flatMap(toPrincipal)
   }
 
-  def unauthorizedResponse(header: RequestHeader): Result = Unauthorized(Json.obj(
+  def unauthorizedResponse: Result = Unauthorized(Json.obj(
       "status"  -> "Unauthorized",
       "message" -> s"$AUTHORIZATION header missing or invalid",
       "remedy"  -> s"Provide a valid $AUTHORIZATION header '$AUTHORIZATION: $ApiKeyPrefix [your-api-key]' in your request"
