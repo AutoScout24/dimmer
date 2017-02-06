@@ -51,7 +51,7 @@ class Configuration @Inject() (playConfig: play.api.Configuration) extends Confi
       case value : ConfigObject =>
         val config = value.toConfig
         try {
-          Some(ApiKey(config.getString("name"), config.getString("key")))
+          Some(ApiKey(config.getString("name"), config.getString("hash")))
         } catch {
           case NonFatal(e) =>
             Logger.warn("Parsing api key failed", e)

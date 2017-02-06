@@ -23,6 +23,7 @@ libraryDependencies ++= Seq(
   LogstashEncoder,
   PlayMetrics,
   DropwizardMetrics,
+  ScalaBcrypt,
   ScalaPbRuntime          % PB.protobufConfig,
   ScalaTestPlus           % Test,
   AkkaPersistenceInmemory % Test,

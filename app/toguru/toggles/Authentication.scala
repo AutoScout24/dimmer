@@ -4,7 +4,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Results._
 import play.api.mvc._
 import play.mvc.Http.HeaderNames.AUTHORIZATION
-import toguru.toggles.Authentication._
+import com.github.t3hnar.bcrypt._
 
 import scala.concurrent.Future
 
@@ -20,14 +20,11 @@ object Authentication {
 
   case object DevUser extends Principal { val name = "dev" }
 
-  case class ApiKey(name: String, key: String)
+  case class ApiKey(name: String, hash: String)
 
   case class Config(apiKeys: Seq[ApiKey], disabled: Boolean)
 
   class AuthenticatedRequest[A](val principal: Principal, request: Request[A]) extends WrappedRequest(request)
-}
-
-trait Authentication {
 
   import scala.language.higherKinds
 
@@ -40,7 +37,7 @@ trait Authentication {
       override protected def refine[A](r: R[A]): Future[Either[Result, AuthenticatedRequest[A]]] =
         extractPrincipal(config, r) match {
           case Some(p) => Future.successful(Right(new AuthenticatedRequest(p, r)))
-          case None    => Future.successful(Left(unauthorizedResponse))
+          case None    => Future.successful(Left(UnauthorizedResponse))
         }
     }
   }
@@ -49,7 +46,7 @@ trait Authentication {
     def toPrincipal: String => Option[Principal] = {
 
       case ApiKeyRegex(key) =>
-        config.apiKeys.collectFirst { case ApiKey(name, `key`) => ApiKeyPrincipal(name) }
+        config.apiKeys.collectFirst { case ApiKey(name, hash) if key.isBcrypted(hash) => ApiKeyPrincipal(name) }
 
       case _  =>
         None
@@ -63,9 +60,15 @@ trait Authentication {
       maybeHeader.flatMap(toPrincipal)
   }
 
-  def unauthorizedResponse: Result = Unauthorized(Json.obj(
+  val UnauthorizedResponse: Result = Unauthorized(Json.obj(
       "status"  -> "Unauthorized",
       "message" -> s"$AUTHORIZATION header missing or invalid",
       "remedy"  -> s"Provide a valid $AUTHORIZATION header '$AUTHORIZATION: $ApiKeyPrefix [your-api-key]' in your request"
     ))
+}
+
+trait Authentication {
+
+  val Authenticate = Authentication.Authenticate
+
 }

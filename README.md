@@ -55,6 +55,10 @@ with curl, the syntax to add the proper header is
 curl -H "Authorization: api-key ???" https://your-endpoint.example.com/auditlog
 ```
 
+In the service configuration, `auth.api-keys` must contain an array of objects with fields
+`name` and `hash`. The hash must be created with BCrypt, see e.g. 
+[the test configuration](conf/test.conf).
+
 ### Error Handling
 
 The management API tries to help on how to proceed when a problem occurs (due to

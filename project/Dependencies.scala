@@ -12,6 +12,7 @@ object Version {
   val ScalaTestPlus           = "1.5.1"
   val PlayMetrics             = "2.5.13"
   val DropwizardMetrics       = "3.1.2"
+  val ScalaBcrypt             = "3.0"
   val Mockito                 = "1.10.19"
 
 }
@@ -26,6 +27,7 @@ object Library {
   val ScalaTestPlus           = "org.scalatestplus.play" %% "scalatestplus-play"        % Version.ScalaTestPlus
   val PlayMetrics             = "de.threedimensions"     %% "metrics-play"              % Version.PlayMetrics
   val DropwizardMetrics       =  "io.dropwizard.metrics" %  "metrics-core"              % Version.DropwizardMetrics exclude("commons-logging", "commons-logging")
+  val ScalaBcrypt             = "com.github.t3hnar"      %% "scala-bcrypt"              % Version.ScalaBcrypt
   val Mockito                 = "org.mockito"            %  "mockito-core"              % Version.Mockito
 
 }

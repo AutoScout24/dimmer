@@ -1,5 +1,6 @@
 package toguru.toggles
 
+import com.github.t3hnar.bcrypt._
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
 import play.api.test.FakeRequest
@@ -8,10 +9,11 @@ import toguru.toggles.Authentication._
 class AuthenticationSpec extends PlaySpec {
 
   trait AuthenticationSetup extends Authentication {
-    val testKey   = ApiKey("test", "valid-key")
+    val testKeyString = "valid-key"
+    val testKey   = ApiKey("test", testKeyString.bcrypt)
     val principal = ApiKeyPrincipal(testKey.name)
 
-    val authenticatedRequest = FakeRequest().withHeaders(HeaderNames.AUTHORIZATION -> s"$ApiKeyPrefix ${testKey.key}")
+    val authenticatedRequest = FakeRequest().withHeaders(HeaderNames.AUTHORIZATION -> s"$ApiKeyPrefix $testKeyString")
     val missingHeaderRequest = FakeRequest()
     val badKeyRequest        = FakeRequest().withHeaders(HeaderNames.AUTHORIZATION -> s"$ApiKeyPrefix invalid-key")
     val badHeaderRequest     = FakeRequest().withHeaders(HeaderNames.AUTHORIZATION -> s"some arbitrary text")
