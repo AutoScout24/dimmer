@@ -2,19 +2,21 @@ package toguru.toggles
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
+import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.{Config => TypesafeConfig}
 import org.scalatest.mock.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
-import play.api.libs.json.JsValue
-import play.api.mvc.{Result, Results}
+import play.api.libs.json.{JsValue, Json}
+import play.api.mvc.{AnyContent, Request, Result, Results}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import toguru.app.Config
 import toguru.helpers.AuthorizationHelpers
 import toguru.toggles.Authentication.ApiKey
 import toguru.toggles.ToggleActor._
+import toguru.toggles.ToggleControllerJsonCommands.ActivationBody
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -22,6 +24,9 @@ import scala.concurrent.duration._
 class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with AuthorizationHelpers {
 
   val nopActor = Props(new Actor { def receive = { case _ => () } })
+
+  implicit val testActorSystem = ActorSystem("test-system")
+  implicit val materializer = ActorMaterializer()
 
   def createController(props: Props = nopActor): ToggleController = {
     val system = ActorSystem()
@@ -219,7 +224,132 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
     "deny access when not api key given" in {
       val controller = createController()
 
-      val result = controller.deleteGlobalRollout("toggle-id")().apply(FakeRequest())
+      val result: Future[Result] = controller.deleteGlobalRollout("toggle-id")().apply(FakeRequest())
+
+      verifyStatus(result, 401, "Unauthorized")
+    }
+  }
+
+  "create activation" should {
+    "return ok, toggleId and actionId when called" in {
+      val controller = createController(Props(new Actor {
+        def receive = { case _ => sender ! CreateActivationSuccess(0)  }
+      }))
+
+      val body = ActivationBody(50, Map("culture" -> Seq("de-DE", "de-AT")))
+
+      val request = authorizedRequest.withBody(body)
+
+      val result = controller.createActivation("toggle-id")().apply(request)
+
+      val shouldResponse =  Json.parse("""{ "status": "Ok", "index": 0 }""")
+
+      status(result) mustBe 200
+      contentAsJson(result) mustBe shouldResponse
+    }
+
+    "deny access when no api key given" in {
+
+      val controller = createController()
+
+      val request = FakeRequest().withBody(ActivationBody(1))
+
+      val result = controller.createActivation("toggle-id")().apply(request)
+
+      verifyStatus(result, 401, "Unauthorized")
+    }
+  }
+
+  "Update activation" should {
+    "return ok, toggleId and actionId when called" in {
+      val controller = createController(Props(new Actor {
+        def receive = { case _ => sender ! Success }
+      }))
+
+      val body = ActivationBody(40, Map("culture" -> Seq("de-DE", "de-AT")))
+
+      val request = authorizedRequest.withBody(body)
+
+      val result = controller.updateActivation("toggle-id", 0)().apply(request)
+
+      val shouldResponse =  Json.parse("""{ "status": "Ok"}""")
+
+      status(result) mustBe 200
+      contentAsJson(result) mustBe shouldResponse
+    }
+
+    "return accept activation without attributes" in {
+      var command: Option[UpdateActivationCommand] = None
+      val controller = createController(Props(new Actor {
+        def receive = { case AuthenticatedCommand(c : UpdateActivationCommand, _) =>
+          command = Some(c)
+          sender ! Success
+        }
+      }))
+
+      val body = ActivationBody(40, Map.empty)
+
+      val request = authorizedRequest.withBody(body)
+
+      val result = controller.updateActivation("toggle-id", 0)().apply(request)
+
+      val shouldResponse =  Json.parse("""{ "status": "Ok"}""")
+
+      status(result) mustBe 200
+      contentAsJson(result) mustBe shouldResponse
+      command.value.percentage mustBe 40
+    }
+
+    "deny access when no api key given" in {
+
+      val controller = createController()
+
+      val request = FakeRequest().withBody(ActivationBody(1))
+
+      val result = controller.updateActivation("toggle-id", 0).apply(request)
+
+      verifyStatus(result, 401, "Unauthorized")
+    }
+
+    "returns not found when toggle does not exist" in {
+      val controller = createController(Props(new Actor {
+        def receive = { case _ => sender ! ToggleDoesNotExist("toggle") }
+      }))
+
+      val result = controller.updateActivation("toggle-id", 0).apply(authorizedRequest.withBody(ActivationBody(1)))
+
+      verifyStatus(result, 404, "Not found")
+    }
+  }
+
+  "delete activation" should {
+    "return status ok when toggle is deleted" in {
+      var command: Option[DeleteActivationCommand] = None
+      val controller = createController(Props(new Actor {
+        def receive = { case AuthenticatedCommand(c : DeleteActivationCommand, _) =>
+          command = Some(c)
+          sender ! Success
+        }
+      }))
+
+      val request = authorizedRequest
+
+      val result = controller.deleteActivation("toggle-id", 0)().apply(request)
+
+      val shouldResponse =  Json.parse("""{ "status": "Ok"}""")
+
+      status(result) mustBe 200
+      contentAsJson(result) mustBe shouldResponse
+      command.value.index mustBe 0
+    }
+
+    "should deny access when no api key given" in {
+
+      val controller = createController()
+
+      val request = FakeRequest()
+
+      val result = controller.deleteActivation("toggle-id", 0)().apply(request)
 
       verifyStatus(result, 401, "Unauthorized")
     }

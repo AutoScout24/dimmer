@@ -9,7 +9,7 @@ import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import toguru.app.Config
-import toguru.toggles.events.{GlobalRolloutCreated, ToggleCreated}
+import toguru.toggles.events.{ActivationCreated, CustomAttributeValue, GlobalRolloutCreated, ToggleCreated}
 import toguru.helpers.AuthorizationHelpers
 import toguru.toggles.AuditLogActor.GetLog
 
@@ -41,10 +41,12 @@ class AuditLogControllerSpec extends PlaySpec with MockitoSugar with Authorizati
       // prepare
       val tags =  Map("team" -> "Toguru team")
       val events = List(
+        AuditLog.Entry("toggle-1", ActivationCreated(25, Map("country" -> CustomAttributeValue(Seq("de-DE", "de-AT"))))),
         AuditLog.Entry("toggle-1", GlobalRolloutCreated(20)),
         AuditLog.Entry("toggle-1", ToggleCreated("toggle 1", "first toggle", tags))
       )
 
+      implicit val activationReads = Json.reads[ToggleActivation]
       implicit val reads = Json.reads[ToggleState]
 
       val controller = createController(Props(new Actor() {
@@ -61,12 +63,15 @@ class AuditLogControllerSpec extends PlaySpec with MockitoSugar with Authorizati
       log mustBe a[JsArray]
 
       (log(0) \ "id").asOpt[String] mustBe Some("toggle-1")
-      (log(0) \ "percentage").asOpt[Int] mustBe Some(20)
+      (log(0) \ "percentage" ).asOpt[Int] mustBe Some(25)
 
       (log(1) \ "id").asOpt[String] mustBe Some("toggle-1")
-      (log(1) \ "name").asOpt[String] mustBe Some("toggle 1")
-      (log(1) \ "description").asOpt[String] mustBe Some("first toggle")
-      (log(1) \ "tags").asOpt[Map[String,String]] mustBe Some(tags)
+      (log(1) \ "percentage").asOpt[Int] mustBe Some(20)
+
+      (log(2) \ "id").asOpt[String] mustBe Some("toggle-1")
+      (log(2) \ "name").asOpt[String] mustBe Some("toggle 1")
+      (log(2) \ "description").asOpt[String] mustBe Some("first toggle")
+      (log(2) \ "tags").asOpt[Map[String,String]] mustBe Some(tags)
     }
 
     "deny access when not api key given" in {

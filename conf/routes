@@ -3,22 +3,28 @@
 # ~~~~
 
 # Home page
-GET        /healthcheck                @toguru.app.Application.healthCheck
+GET        /healthcheck                             @toguru.app.Application.healthCheck
 
-GET        /readycheck                 @toguru.app.Application.readyCheck
+GET        /readycheck                              @toguru.app.Application.readyCheck
 
-GET        /toggle/:id                 @toguru.toggles.ToggleController.get(id: String)
+GET        /toggle/:id                              @toguru.toggles.ToggleController.get(id: String)
 
-POST       /toggle                     @toguru.toggles.ToggleController.create
+POST       /toggle                                  @toguru.toggles.ToggleController.create
 
-PUT        /toggle/:id                 @toguru.toggles.ToggleController.update(id: String)
+PUT        /toggle/:id                              @toguru.toggles.ToggleController.update(id: String)
 
-DELETE     /toggle/:id                 @toguru.toggles.ToggleController.delete(id: String)
+DELETE     /toggle/:id                              @toguru.toggles.ToggleController.delete(id: String)
 
-PUT        /toggle/:id/globalrollout   @toguru.toggles.ToggleController.setGlobalRollout(id: String)
+PUT        /toggle/:id/globalrollout                @toguru.toggles.ToggleController.setGlobalRollout(id: String)
 
-DELETE     /toggle/:id/globalrollout   @toguru.toggles.ToggleController.deleteGlobalRollout(id: String)
+DELETE     /toggle/:id/globalrollout                @toguru.toggles.ToggleController.deleteGlobalRollout(id: String)
 
-GET        /togglestate                @toguru.toggles.ToggleStateController.get(seqNo: Option[Long])
+POST       /toggle/:id/activations                  @toguru.toggles.ToggleController.createActivation(id: String)
 
-GET        /auditlog                   @toguru.toggles.AuditLogController.get
+PUT        /toggle/:id/activations/:activationId    @toguru.toggles.ToggleController.updateActivation(id: String, activationId: Integer)
+
+DELETE     /toggle/:id/activations/:activationId    @toguru.toggles.ToggleController.deleteActivation(id: String, activationId: Integer)
+
+GET        /togglestate                             @toguru.toggles.ToggleStateController.get(seqNo: Option[Long])
+
+GET        /auditlog                                @toguru.toggles.AuditLogController.get

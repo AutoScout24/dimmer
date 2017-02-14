@@ -35,6 +35,14 @@ object ToggleActor {
 
   case object DeleteGlobalRolloutCommand
 
+  case class CreateActivationCommand(percentage: Int, attributes: Map[String, Seq[String]] = Map.empty)
+
+  case class CreateActivationSuccess(index: Int)
+
+  case class UpdateActivationCommand(index: Int, percentage: Int, attributes: Map[String, Seq[String]] = Map.empty)
+
+  case class DeleteActivationCommand(index: Int)
+
   case object Success
 
   case class ToggleDoesNotExist(id: String)
@@ -117,6 +125,13 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
           }
         case None => sender ! Success
       }
+
+    case CreateActivationCommand(p, a) =>
+      val event = ActivationCreated(p, toEventFormat(a), meta)
+      persist(event) { event =>
+        receiveRecover(event)
+        sender ! CreateActivationSuccess(0)
+      }
   }
 
   def snapshotCommands: Receive = {
@@ -172,6 +187,9 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
 
     case GlobalRolloutDeleted(_) =>
       updateToggle(_.copy(rolloutPercentage = None))
+
+    case ActivationCreated(p, a, _) =>
+      updateToggle(_.copy(activations = IndexedSeq(ToggleActivation(p, fromEventFormat(a)))))
   }
 
   def updateToggle(update: Toggle => Toggle) = {

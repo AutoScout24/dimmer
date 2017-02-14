@@ -6,8 +6,6 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.libs.json._
-import play.api.libs.json.Reads._
-import play.api.libs.functional.syntax._
 import play.api.mvc._
 import toguru.app.Config
 import toguru.logging.EventPublishing
@@ -16,22 +14,9 @@ import toguru.toggles.ToggleActor._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object ToggleController {
-
-  implicit val toggleFormat = Json.format[Toggle]
-  implicit val createToggleFormat = Json.format[CreateToggleCommand]
-  implicit val updateToggleFormat = Json.format[UpdateToggleCommand]
-  implicit val globalRolloutFormat: Format[SetGlobalRolloutCommand] =
-    (JsPath \ "percentage").format[Int](min(1) keepAnd max(100)).inmap(
-      SetGlobalRolloutCommand.apply, unlift(SetGlobalRolloutCommand.unapply))
-
-  val sampleCreateToggle = CreateToggleCommand("toggle name", "toggle description", Map("team" -> "Toguru team"))
-  val sampleUpdateToggle = UpdateToggleCommand(None, Some("new toggle description"), Some(Map("team" -> "Toguru team")))
-  val sampleSetGlobalRollout = SetGlobalRolloutCommand(42)
-}
 
 class ToggleController(config: Config, provider: ToggleActorProvider) extends Controller with EventPublishing with Authentication with Results with JsonResponses with ToggleActorResponses {
-  import ToggleController._
+  import ToggleControllerJsonCommands._
 
   val AuthenticatedWithJson: ActionBuilder[AuthenticatedRequest] = ActionWithJson andThen Authenticate(config.auth)
 
@@ -135,6 +120,51 @@ class ToggleController(config: Config, provider: ToggleActorProvider) extends Co
 
     withActor(toggleId) { toggleActor =>
       (toggleActor ? authenticated(DeleteGlobalRolloutCommand)).map(
+        both(whenToggleExists, whenPersisted) {
+          case Success =>
+            publishSuccess(actionId, toggleId)
+            Ok(Json.obj("status" -> "Ok"))
+        })
+    }
+  }
+
+  def createActivation(toggleId: String) = AuthenticatedWithJson.async(activationBodyParser) { implicit request =>
+    import play.api.libs.concurrent.Execution.Implicits._
+    implicit val actionId = "create-activation"
+    val command = authenticated(request.body.toCreate)
+
+    withActor(toggleId) { toggleActor =>
+      (toggleActor ? command).map(
+        both(whenToggleExists, whenPersisted) {
+          case CreateActivationSuccess(activationIndex) =>
+            publishSuccess(actionId, toggleId)
+            Ok(Json.obj("status" -> "Ok", "index" -> activationIndex))
+        })
+    }
+  }
+
+  def updateActivation(toggleId: String, index: Int) = AuthenticatedWithJson.async(activationBodyParser) { implicit request =>
+    import play.api.libs.concurrent.Execution.Implicits._
+    implicit val actionId = "update-activation"
+    val command  = authenticated(request.body.toUpdate(index))
+
+    withActor(toggleId) { toggleActor =>
+      (toggleActor ? command).map(
+        both(whenToggleExists, whenPersisted) {
+          case Success =>
+            publishSuccess(actionId, toggleId)
+            Ok(Json.obj("status" -> "Ok"))
+        })
+    }
+  }
+
+  def deleteActivation(toggleId: String, index: Int) = AuthenticatedWithJson.async { implicit request =>
+    import play.api.libs.concurrent.Execution.Implicits._
+    implicit val actionId = "delete-activation"
+    val command  = authenticated(DeleteActivationCommand(index))
+
+    withActor(toggleId) { toggleActor =>
+      (toggleActor ? command).map(
         both(whenToggleExists, whenPersisted) {
           case Success =>
             publishSuccess(actionId, toggleId)

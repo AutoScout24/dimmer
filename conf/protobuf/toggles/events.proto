@@ -46,3 +46,26 @@ message GlobalRolloutDeleted {
     option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
     Metadata meta = 1;
 }
+
+message ActivationCreated {
+    option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
+    int32 percentage = 1;
+    map<string, CustomAttributeValue> attributes = 2;
+    Metadata meta = 3;
+}
+
+message ActivationUpdated {
+    option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
+    int32 percentage = 1;
+    map<string, CustomAttributeValue> attributes = 2;
+    Metadata meta = 3;
+}
+
+message CustomAttributeValue {
+    repeated string values = 1;
+}
+
+message ActivationDeleted {
+    option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
+    Metadata meta = 1;
+}

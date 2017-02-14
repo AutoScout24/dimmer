@@ -27,12 +27,18 @@ class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: C
       "user"  -> o.username
     )
   }
-  val createdWrites = Json.writes[ToggleCreated]
-  val updatedWrites = Json.writes[ToggleUpdated]
-  val deletedWrites = Json.writes[ToggleDeleted]
+  val toggleCreatedWrites = Json.writes[ToggleCreated]
+  val toggleUpdatedWrites = Json.writes[ToggleUpdated]
+  val toggleDeletedWrites = Json.writes[ToggleDeleted]
+
   val rolloutCreatedWrites = Json.writes[GlobalRolloutCreated]
   val rolloutUpdatedWrites = Json.writes[GlobalRolloutUpdated]
   val rolloutDeletedWrites = Json.writes[GlobalRolloutDeleted]
+
+  implicit val customAttributeValueWrites = Json.writes[CustomAttributeValue]
+  val activationCreatedWrites = Json.writes[ActivationCreated]
+  val activationUpdatedWrites = Json.writes[ActivationUpdated]
+  val activationDeletedWrites = Json.writes[ActivationDeleted]
 
   implicit val toggleEventWrites = new OWrites[AuditLog.Entry] {
 
@@ -42,12 +48,16 @@ class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: C
     override def writes(o: AuditLog.Entry) = {
       val id = o.id
       o.event match {
-        case e : ToggleCreated        => fields(id, "toggle created")  ++ createdWrites.writes(e)
-        case e : ToggleUpdated        => fields(id, "toggle updated")  ++ updatedWrites.writes(e)
-        case e : ToggleDeleted        => fields(id, "toggle deleted")  ++ deletedWrites.writes(e)
-        case e : GlobalRolloutCreated => fields(id, "rollout created") ++ rolloutCreatedWrites.writes(e)
-        case e : GlobalRolloutUpdated => fields(id, "rollout updated") ++ rolloutUpdatedWrites.writes(e)
-        case e : GlobalRolloutDeleted => fields(id, "rollout deleted") ++ rolloutDeletedWrites.writes(e)
+        case e : ToggleCreated        => fields(id, "toggle created")     ++ toggleCreatedWrites.writes(e)
+        case e : ToggleUpdated        => fields(id, "toggle updated")     ++ toggleUpdatedWrites.writes(e)
+        case e : ToggleDeleted        => fields(id, "toggle deleted")     ++ toggleDeletedWrites.writes(e)
+        case e : GlobalRolloutCreated => fields(id, "rollout created")    ++ rolloutCreatedWrites.writes(e)
+        case e : GlobalRolloutUpdated => fields(id, "rollout updated")    ++ rolloutUpdatedWrites.writes(e)
+        case e : GlobalRolloutDeleted => fields(id, "rollout deleted")    ++ rolloutDeletedWrites.writes(e)
+        case e : ActivationCreated    => fields(id, "activation created") ++ activationCreatedWrites.writes(e)
+        case e : ActivationUpdated    => fields(id, "activation updated") ++ activationUpdatedWrites.writes(e)
+        case e : ActivationDeleted    => fields(id, "activation deleted") ++ activationDeletedWrites.writes(e)
+
       }
     }
   }

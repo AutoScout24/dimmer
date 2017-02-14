@@ -82,7 +82,7 @@ class ToggleIntegrationSpec extends PlaySpec
 
     def fetchToggleResponse() = await(requestWithApiKeyHeader(s"$toggleEndpointURL/$toggleId").get)
 
-    def fetchToggle(): Toggle = Json.parse(fetchToggleResponse().body).as(ToggleController.toggleFormat)
+    def fetchToggle(): Toggle = Json.parse(fetchToggleResponse().body).as(ToggleControllerJsonCommands.toggleFormat)
 
     def getActor(name: String): ActorRef = app.injector.instanceOf[ActorRef](namedKey(classOf[ActorRef], name))
 
@@ -112,7 +112,7 @@ class ToggleIntegrationSpec extends PlaySpec
       // verify
       verifyResponseIsOk(createResponse)
 
-      val maybeToggle = Json.parse(getResponse.body).asOpt(ToggleController.toggleFormat)
+      val maybeToggle = Json.parse(getResponse.body).asOpt(ToggleControllerJsonCommands.toggleFormat)
       maybeToggle mustBe Some(Toggle(toggleId, name, "toggle description", Map("team" -> "Toguru team")))
     }
 

@@ -158,6 +158,15 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       response mustBe Success
     }
 
+    "create activations when receiving command" in new ToggleActorSetup {
+      val actor = createActor(Some(toggle))
+      val cmd = authenticated(CreateActivationCommand(53, Map("culture" -> Seq("de-DE", "de-AT"))))
+      val response = await(actor ? cmd)
+      response mustBe CreateActivationSuccess(0)
+      val activation = fetchToggle(actor).activations(0)
+      activation mustBe ToggleActivation(53, Map("culture" -> Seq("de-DE", "de-AT")))
+    }
+
     "persist toggle events" in new ToggleActorSetup {
       val actor = system.actorOf(Props(new ToggleActor(toggleId, None) {
         override def time() = 0

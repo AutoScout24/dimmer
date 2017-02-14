@@ -43,7 +43,9 @@ object ToggleStateActor {
 
 case class ToggleState(id: String,
                        tags: Map[String, String] = Map.empty,
-                       rolloutPercentage: Option[Int] = None)
+                       rolloutPercentage: Option[Int] = None,
+                       activations: IndexedSeq[ToggleActivation] = IndexedSeq.empty
+                      )
 
 case class ToggleStates(sequenceNo: Long, toggles: Seq[ToggleState])
 
@@ -117,6 +119,9 @@ class ToggleStateActor(
       case GlobalRolloutCreated(p, _)   => updateToggle(id, _.copy(rolloutPercentage = Some(p)))
       case GlobalRolloutUpdated(p, _)   => updateToggle(id, _.copy(rolloutPercentage = Some(p)))
       case GlobalRolloutDeleted(_)      => updateToggle(id, _.copy(rolloutPercentage = None))
+      case ActivationCreated(p, a, _)   => updateToggle(id, _.copy(activations = IndexedSeq(ToggleActivation(p, fromEventFormat(a)))))
+      case ActivationUpdated(p, a, _)   => updateToggle(id, _.copy(activations = IndexedSeq(ToggleActivation(p, fromEventFormat(a)))))
+      case ActivationDeleted(_)         => updateToggle(id, _.copy(activations = IndexedSeq.empty))
     }
     lastSequenceNo = offset
   }

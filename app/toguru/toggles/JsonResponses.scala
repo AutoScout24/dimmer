@@ -8,6 +8,10 @@ import play.api.mvc._
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+object JsonResponses extends JsonResponses  {
+
+}
+
 trait JsonResponses extends ResultPublishing {
 
   def errorJson(status: String, reason: String): JsObject =
@@ -42,7 +46,7 @@ trait JsonResponses extends ResultPublishing {
         "Provided json body is not valid",
         "Provide a valid json body of the form given in the sample field"
       ) ++
-      Json.obj("sample" -> sample, "errors" -> errorsObject)
+        Json.obj("sample" -> sample, "errors" -> errorsObject)
     )
   }
 
@@ -51,9 +55,9 @@ trait JsonResponses extends ResultPublishing {
 
     val givenAcceptHeaders = request.acceptedTypes.mkString(", ")
     BadRequest(s"""
-     |Bad Request
-     |  No supported $ACCEPT request header provided (given was '$givenAcceptHeaders').
-     |  Include ${allowedHeaders.mkString(", or")} in the $ACCEPT request header""".stripMargin)
+                  |Bad Request
+                  |  No supported $ACCEPT request header provided (given was '$givenAcceptHeaders').
+                  |  Include ${allowedHeaders.mkString(", or")} in the $ACCEPT request header""".stripMargin)
   }
 
   def serverError(actionId: String, fields: (String, Any)*): PartialFunction[Throwable, Result] = {
