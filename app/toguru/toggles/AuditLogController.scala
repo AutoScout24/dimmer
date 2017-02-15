@@ -31,10 +31,6 @@ class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: C
   val toggleUpdatedWrites = Json.writes[ToggleUpdated]
   val toggleDeletedWrites = Json.writes[ToggleDeleted]
 
-  val rolloutCreatedWrites = Json.writes[GlobalRolloutCreated]
-  val rolloutUpdatedWrites = Json.writes[GlobalRolloutUpdated]
-  val rolloutDeletedWrites = Json.writes[GlobalRolloutDeleted]
-
   implicit val stringSeqWrites: Writes[StringSeq] = Writes.seq[String].contramap(_.values)
   val activationCreatedWrites = Json.writes[ActivationCreated]
   val activationUpdatedWrites = Json.writes[ActivationUpdated]
@@ -51,9 +47,6 @@ class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: C
         case e : ToggleCreated        => fields(id, "toggle created")     ++ toggleCreatedWrites.writes(e)
         case e : ToggleUpdated        => fields(id, "toggle updated")     ++ toggleUpdatedWrites.writes(e)
         case e : ToggleDeleted        => fields(id, "toggle deleted")     ++ toggleDeletedWrites.writes(e)
-        case e : GlobalRolloutCreated => fields(id, "rollout created")    ++ rolloutCreatedWrites.writes(e)
-        case e : GlobalRolloutUpdated => fields(id, "rollout updated")    ++ rolloutUpdatedWrites.writes(e)
-        case e : GlobalRolloutDeleted => fields(id, "rollout deleted")    ++ rolloutDeletedWrites.writes(e)
         case e : ActivationCreated    => fields(id, "activation created") ++ activationCreatedWrites.writes(e)
         case e : ActivationUpdated    => fields(id, "activation updated") ++ activationUpdatedWrites.writes(e)
         case e : ActivationDeleted    => fields(id, "activation deleted") ++ activationDeletedWrites.writes(e)

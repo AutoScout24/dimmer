@@ -1,6 +1,6 @@
 package toguru.toggles
 
-import akka.persistence.journal.{Tagged, WriteEventAdapter}
+import akka.persistence.journal._
 import akka.serialization.SerializerWithStringManifest
 import com.trueaccord.scalapb.GeneratedMessage
 import toguru.toggles.events._
@@ -12,6 +12,8 @@ import toguru.toggles.snapshots.{DeletedToggleSnapshot, ExistingToggleSnapshot}
 trait ToggleEvent extends GeneratedMessage {
   def meta: Option[Metadata]
 }
+
+trait DeprecatedToggleEvent extends ToggleEvent
 
 /**
   * Marker trait for toggle snapshots.
@@ -29,20 +31,16 @@ class ToggleEventProtoBufSerializer extends SerializerWithStringManifest {
   final val CreatedManifest              = classOf[ToggleCreated].getSimpleName
   final val UpdatedManifest              = classOf[ToggleUpdated].getSimpleName
   final val DeletedManifest              = classOf[ToggleDeleted].getSimpleName
-  final val GlobalRolloutCreateManifest  = classOf[GlobalRolloutCreated].getSimpleName
-  final val GlobalRolloutUpdatedManifest = classOf[GlobalRolloutUpdated].getSimpleName
-  final val GlobalRolloutDeletedManifest = classOf[GlobalRolloutDeleted].getSimpleName
   final val ActivationCreatedManifest    = classOf[ActivationCreated].getSimpleName
   final val ActivationUpdatedManifest    = classOf[ActivationUpdated].getSimpleName
   final val ActivationDeletedManifest    = classOf[ActivationDeleted].getSimpleName
 
+  // deprecated events
+  final val GlobalRolloutCreateManifest  = classOf[GlobalRolloutCreated].getSimpleName
+  final val GlobalRolloutUpdatedManifest = classOf[GlobalRolloutUpdated].getSimpleName
+  final val GlobalRolloutDeletedManifest = classOf[GlobalRolloutDeleted].getSimpleName
+
   override def manifest(o: AnyRef): String = o.getClass.getSimpleName
-
-  def toActivation(e: GlobalRolloutCreated): ActivationCreated = ActivationCreated(percentage = Some(e.percentage), meta = e.meta)
-
-  def toActivation(e: GlobalRolloutUpdated): ActivationUpdated = ActivationUpdated(percentage = Some(e.percentage), meta = e.meta)
-
-  def toActivation(e: GlobalRolloutDeleted): ActivationDeleted = ActivationDeleted(meta = e.meta)
 
   override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef = manifest match {
     case CreatedManifest              => ToggleCreated.parseFrom(bytes)
@@ -59,6 +57,10 @@ class ToggleEventProtoBufSerializer extends SerializerWithStringManifest {
   override def toBinary(o: AnyRef): Array[Byte] = o match {
     case e: ToggleEvent => e.toByteArray
   }
+
+  def toActivation(e: GlobalRolloutCreated) = ActivationCreated(percentage = Some(e.percentage), meta = e.meta)
+  def toActivation(e: GlobalRolloutUpdated) = ActivationUpdated(percentage = Some(e.percentage), meta = e.meta)
+  def toActivation(e: GlobalRolloutDeleted) = ActivationDeleted(meta = e.meta)
 }
 
 /**

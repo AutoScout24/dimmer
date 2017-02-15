@@ -36,19 +36,19 @@ message ToggleDeleted {
 }
 
 message GlobalRolloutCreated {
-    option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
+    option (scalapb.message).extends = "toguru.toggles.DeprecatedToggleEvent";
     int32 percentage = 1;
     Metadata meta = 2;
 }
 
 message GlobalRolloutUpdated {
-    option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
+    option (scalapb.message).extends = "toguru.toggles.DeprecatedToggleEvent";
     int32 percentage = 1;
     Metadata meta = 2;
 }
 
 message GlobalRolloutDeleted {
-    option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
+    option (scalapb.message).extends = "toguru.toggles.DeprecatedToggleEvent";
     Metadata meta = 1;
 }
 

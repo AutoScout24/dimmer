@@ -31,10 +31,6 @@ object ToggleActor {
 
   case object AuthenticationMissing
 
-  case class SetGlobalRolloutCommand(percentage: Int)
-
-  case object DeleteGlobalRolloutCommand
-
   case class CreateActivationCommand(percentage: Option[Int], attributes: Map[String, Seq[String]] = Map.empty)
 
   case class CreateActivationSuccess(index: Int)
@@ -107,23 +103,6 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
       persist(ToggleDeleted(meta)) { deleted =>
         receiveRecover(deleted)
         sender ! Success
-      }
-
-    case SetGlobalRolloutCommand(p) =>
-      val event = if(t.rolloutPercentage.isDefined) GlobalRolloutUpdated(p, meta) else GlobalRolloutCreated(p, meta)
-      persist(event) { event =>
-        receiveRecover(event)
-        sender ! Success
-      }
-
-    case DeleteGlobalRolloutCommand =>
-      t.rolloutPercentage match {
-        case Some(_) =>
-          persist(GlobalRolloutDeleted(meta)) { deleted =>
-            receiveRecover(deleted)
-            sender ! Success
-          }
-        case None => sender ! Success
       }
 
     case CreateActivationCommand(p, a) =>
@@ -203,15 +182,6 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
 
     case ToggleUpdated(name, description, tags, _) =>
       updateToggle(_.copy(name = name, description = description, tags = tags))
-
-    case GlobalRolloutCreated(p, _) =>
-      updateToggle(_.copy(rolloutPercentage = Some(p)))
-
-    case GlobalRolloutUpdated(p, _) =>
-      updateToggle(_.copy(rolloutPercentage = Some(p)))
-
-    case GlobalRolloutDeleted(_) =>
-      updateToggle(_.copy(rolloutPercentage = None))
 
     case act @ ActivationCreated(_, p, a, _) =>
       updateToggle(_.copy(activations = IndexedSeq(ToggleActivation(p, toProtoBuf(a)))))

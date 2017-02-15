@@ -42,7 +42,7 @@ class AuditLogControllerSpec extends PlaySpec with MockitoSugar with Authorizati
       val tags =  Map("team" -> "Toguru team")
       val events = List(
         AuditLog.Entry("toggle-1", ActivationCreated(0, Some(25), Map("country" -> StringSeq(Seq("de-DE", "de-AT"))))),
-        AuditLog.Entry("toggle-1", GlobalRolloutCreated(20)),
+        AuditLog.Entry("toggle-1", ActivationUpdated(0, Some(20))),
         AuditLog.Entry("toggle-1", ToggleCreated("toggle 1", "first toggle", tags))
       )
 

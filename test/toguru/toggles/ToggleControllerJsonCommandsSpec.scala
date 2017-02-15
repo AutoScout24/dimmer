@@ -1,7 +1,7 @@
 package toguru.toggles
 
 import org.scalatestplus.play.PlaySpec
-import play.api.libs.json.Json
+import play.api.libs.json.{JsError, Json}
 import toguru.toggles.ToggleControllerJsonCommands._
 
 
@@ -21,6 +21,12 @@ class ToggleControllerJsonCommandsSpec extends PlaySpec {
       val parsedActivation = singleValueActivation.as[ActivationBody]
 
       parsedActivation.attributes mustBe Map("country" -> Seq("de-DE"))
+    }
+
+    "reject rollout percentages that are out of range" in {
+      val invalidPercentage = Json.obj("rollout" -> Json.obj("percentage" -> 101))
+
+      invalidPercentage.validate[ActivationBody] mustBe a[JsError]
     }
 
     "parse attributes with sequence value" in {

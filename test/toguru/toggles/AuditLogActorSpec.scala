@@ -16,11 +16,11 @@ class AuditLogActorSpec extends ActorSpec {
   val events = List(
     Entry("toggle-1", ToggleCreated("toggle 1", "first toggle", Map("team" -> "Toguru team"), meta(0))),
     Entry("toggle-1", ToggleUpdated("toggle 1", "very first toggle", Map("team" -> "Toguru team"), meta(10))),
-    Entry("toggle-1", GlobalRolloutCreated(20, meta(20))),
-    Entry("toggle-1", GlobalRolloutUpdated(50, meta(30))),
-    Entry("toggle-1", GlobalRolloutDeleted(meta(40))),
-    Entry("toggle-1", ActivationCreated(0, None, Map("country" -> StringSeq(Seq("de-DE", "de-AT"))), meta(50))),
-    Entry("toggle-1", ActivationUpdated(0, Some(34), Map("country" -> StringSeq(Seq("de-DE", "de-AT"))), meta(60))),
+    Entry("toggle-1", ActivationCreated(0, None, Map("country" -> StringSeq(Seq("de-DE", "de-AT"))), meta(20))),
+    Entry("toggle-1", ActivationUpdated(0, Some(34), Map("country" -> StringSeq(Seq("de-DE", "de-AT"))), meta(30))),
+    Entry("toggle-1", ActivationDeleted(0, meta(40))),
+    Entry("toggle-1", ActivationCreated(0, Some(10), meta = meta(50))),
+    Entry("toggle-1", ActivationUpdated(0, Some(100), meta = meta(60))),
     Entry("toggle-1", ActivationDeleted(0, meta(70)))
   )
 
@@ -68,6 +68,8 @@ class AuditLogActorSpec extends ActorSpec {
       actor ! Cleanup
 
       val response = await(actor ? GetLog)
+
+      response.asInstanceOf[Seq[_]].length mustBe 5
 
       response mustBe events.reverse.take(5)
     }

@@ -18,9 +18,6 @@ object ToggleControllerJsonCommands {
 
   implicit val createToggleFormat = Json.format[CreateToggleCommand]
   implicit val updateToggleFormat = Json.format[UpdateToggleCommand]
-  implicit val globalRolloutFormat: Format[SetGlobalRolloutCommand] =
-    (JsPath \ "percentage").format[Int](min(1) keepAnd max(100)).inmap(
-      SetGlobalRolloutCommand.apply, unlift(SetGlobalRolloutCommand.unapply))
 
   implicit val activationBodyReads: Reads[ActivationBody] = (
     (JsPath \ "rollout" \ "percentage").readNullable[Int](min(1) keepAnd max(100)) and
@@ -34,7 +31,6 @@ object ToggleControllerJsonCommands {
 
   val sampleCreateToggle = CreateToggleCommand("toggle name", "toggle description", Map("team" -> "Toguru team"))
   val sampleUpdateToggle = UpdateToggleCommand(None, Some("new toggle description"), Some(Map("team" -> "Toguru team")))
-  val sampleSetGlobalRollout = SetGlobalRolloutCommand(42)
   val sampleActivation = ActivationBody(Some(42), Map("country" -> Seq("de-DE", "de-AT", "DE")))
 
   val activationBodyParser = JsonResponses.json(sampleActivation)(activationBodyReads, activationBodyWrites)

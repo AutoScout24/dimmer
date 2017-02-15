@@ -116,9 +116,6 @@ class ToggleStateActor(
       case ToggleCreated(_, _, tags, _)  => toggles = toggles.updated(id, ToggleState(id, tags, None))
       case ToggleUpdated(_, _, tags, _)  => updateToggle(id, _.copy(tags = tags))
       case ToggleDeleted(_)              => toggles = toggles - id
-      case GlobalRolloutCreated(p, _)    => updateToggle(id, _.copy(rolloutPercentage = Some(p)))
-      case GlobalRolloutUpdated(p, _)    => updateToggle(id, _.copy(rolloutPercentage = Some(p)))
-      case GlobalRolloutDeleted(_)       => updateToggle(id, _.copy(rolloutPercentage = None))
       case ActivationCreated(_, p, a, _) => updateToggle(id, _.copy(activations = IndexedSeq(ToggleActivation(p, toProtoBuf(a)))))
       case ActivationUpdated(_, p, a, _) => updateToggle(id, _.copy(activations = IndexedSeq(ToggleActivation(p, toProtoBuf(a)))))
       case ActivationDeleted(_, _)       => updateToggle(id, _.copy(activations = IndexedSeq.empty))
