@@ -113,15 +113,15 @@ class ToggleStateActor(
   def handleEvent(id: String, event: ToggleEvent, offset: Long) = {
     publisher.event("state-actor-toggle-event", "eventType" -> event.getClass.getSimpleName, "readJournalLatencyMs" -> latency(event.meta))
     event match {
-      case ToggleCreated(_, _, tags, _) => toggles = toggles.updated(id, ToggleState(id, tags, None))
-      case ToggleUpdated(_, _, tags, _) => updateToggle(id, _.copy(tags = tags))
-      case ToggleDeleted(_)             => toggles = toggles - id
-      case GlobalRolloutCreated(p, _)   => updateToggle(id, _.copy(rolloutPercentage = Some(p)))
-      case GlobalRolloutUpdated(p, _)   => updateToggle(id, _.copy(rolloutPercentage = Some(p)))
-      case GlobalRolloutDeleted(_)      => updateToggle(id, _.copy(rolloutPercentage = None))
-      case ActivationCreated(p, a, _)   => updateToggle(id, _.copy(activations = IndexedSeq(ToggleActivation(p, fromEventFormat(a)))))
-      case ActivationUpdated(p, a, _)   => updateToggle(id, _.copy(activations = IndexedSeq(ToggleActivation(p, fromEventFormat(a)))))
-      case ActivationDeleted(_)         => updateToggle(id, _.copy(activations = IndexedSeq.empty))
+      case ToggleCreated(_, _, tags, _)  => toggles = toggles.updated(id, ToggleState(id, tags, None))
+      case ToggleUpdated(_, _, tags, _)  => updateToggle(id, _.copy(tags = tags))
+      case ToggleDeleted(_)              => toggles = toggles - id
+      case GlobalRolloutCreated(p, _)    => updateToggle(id, _.copy(rolloutPercentage = Some(p)))
+      case GlobalRolloutUpdated(p, _)    => updateToggle(id, _.copy(rolloutPercentage = Some(p)))
+      case GlobalRolloutDeleted(_)       => updateToggle(id, _.copy(rolloutPercentage = None))
+      case ActivationCreated(_, p, a, _) => updateToggle(id, _.copy(activations = IndexedSeq(ToggleActivation(p, toProtoBuf(a)))))
+      case ActivationUpdated(_, p, a, _) => updateToggle(id, _.copy(activations = IndexedSeq(ToggleActivation(p, toProtoBuf(a)))))
+      case ActivationDeleted(_, _)       => updateToggle(id, _.copy(activations = IndexedSeq.empty))
     }
     lastSequenceNo = offset
   }

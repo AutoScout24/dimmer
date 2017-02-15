@@ -19,10 +19,10 @@ class AuditLogActorSpec extends ActorSpec {
     Entry("toggle-1", GlobalRolloutCreated(20, meta(20))),
     Entry("toggle-1", GlobalRolloutUpdated(50, meta(30))),
     Entry("toggle-1", GlobalRolloutDeleted(meta(40))),
-    Entry("toggle-1", ActivationCreated(30, Map("country" -> CustomAttributeValue(Seq("de-DE", "de-AT"))), meta(50))),
-    Entry("toggle-1", ActivationUpdated(34, Map("country" -> CustomAttributeValue(Seq("de-DE", "de-AT"))), meta(60))),
-    Entry("toggle-1", ActivationDeleted(meta(70)))
-    )
+    Entry("toggle-1", ActivationCreated(0, None, Map("country" -> StringSeq(Seq("de-DE", "de-AT"))), meta(50))),
+    Entry("toggle-1", ActivationUpdated(0, Some(34), Map("country" -> StringSeq(Seq("de-DE", "de-AT"))), meta(60))),
+    Entry("toggle-1", ActivationDeleted(0, meta(70)))
+  )
 
   def createActor(events: Seq[Entry] = List.empty, time: Long = 0, retentionLength: Int = 10, retentionTime: FiniteDuration = 10.seconds): ActorRef =
     system.actorOf(Props(new AuditLogActor((_,_) => (), () => time, retentionTime, retentionLength, events)))

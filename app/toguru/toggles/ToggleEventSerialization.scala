@@ -32,16 +32,28 @@ class ToggleEventProtoBufSerializer extends SerializerWithStringManifest {
   final val GlobalRolloutCreateManifest  = classOf[GlobalRolloutCreated].getSimpleName
   final val GlobalRolloutUpdatedManifest = classOf[GlobalRolloutUpdated].getSimpleName
   final val GlobalRolloutDeletedManifest = classOf[GlobalRolloutDeleted].getSimpleName
+  final val ActivationCreatedManifest    = classOf[ActivationCreated].getSimpleName
+  final val ActivationUpdatedManifest    = classOf[ActivationUpdated].getSimpleName
+  final val ActivationDeletedManifest    = classOf[ActivationDeleted].getSimpleName
 
   override def manifest(o: AnyRef): String = o.getClass.getSimpleName
+
+  def toActivation(e: GlobalRolloutCreated): ActivationCreated = ActivationCreated(percentage = Some(e.percentage), meta = e.meta)
+
+  def toActivation(e: GlobalRolloutUpdated): ActivationUpdated = ActivationUpdated(percentage = Some(e.percentage), meta = e.meta)
+
+  def toActivation(e: GlobalRolloutDeleted): ActivationDeleted = ActivationDeleted(meta = e.meta)
 
   override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef = manifest match {
     case CreatedManifest              => ToggleCreated.parseFrom(bytes)
     case UpdatedManifest              => ToggleUpdated.parseFrom(bytes)
     case DeletedManifest              => ToggleDeleted.parseFrom(bytes)
-    case GlobalRolloutCreateManifest  => GlobalRolloutCreated.parseFrom(bytes)
-    case GlobalRolloutUpdatedManifest => GlobalRolloutUpdated.parseFrom(bytes)
-    case GlobalRolloutDeletedManifest => GlobalRolloutDeleted.parseFrom(bytes)
+    case ActivationCreatedManifest    => ActivationCreated.parseFrom(bytes)
+    case ActivationUpdatedManifest    => ActivationUpdated.parseFrom(bytes)
+    case ActivationDeletedManifest    => ActivationDeleted.parseFrom(bytes)
+    case GlobalRolloutCreateManifest  => toActivation(GlobalRolloutCreated.parseFrom(bytes))
+    case GlobalRolloutUpdatedManifest => toActivation(GlobalRolloutUpdated.parseFrom(bytes))
+    case GlobalRolloutDeletedManifest => toActivation(GlobalRolloutDeleted.parseFrom(bytes))
   }
 
   override def toBinary(o: AnyRef): Array[Byte] = o match {

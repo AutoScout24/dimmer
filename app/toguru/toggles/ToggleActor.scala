@@ -35,11 +35,11 @@ object ToggleActor {
 
   case object DeleteGlobalRolloutCommand
 
-  case class CreateActivationCommand(percentage: Int, attributes: Map[String, Seq[String]] = Map.empty)
+  case class CreateActivationCommand(percentage: Option[Int], attributes: Map[String, Seq[String]] = Map.empty)
 
   case class CreateActivationSuccess(index: Int)
 
-  case class UpdateActivationCommand(index: Int, percentage: Int, attributes: Map[String, Seq[String]] = Map.empty)
+  case class UpdateActivationCommand(index: Int, percentage: Option[Int], attributes: Map[String, Seq[String]] = Map.empty)
 
   case class DeleteActivationCommand(index: Int)
 
@@ -127,10 +127,24 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
       }
 
     case CreateActivationCommand(p, a) =>
-      val event = ActivationCreated(p, toEventFormat(a), meta)
-      persist(event) { event =>
+      val index = 0
+      persist(ActivationCreated(index, p, fromProtoBuf(a), meta)) { event =>
         receiveRecover(event)
-        sender ! CreateActivationSuccess(0)
+        sender ! CreateActivationSuccess(index)
+      }
+
+    case UpdateActivationCommand(_, p, a) =>
+      val index = 0
+      persist(ActivationUpdated(index, p, fromProtoBuf(a), meta)) { event =>
+        receiveRecover(event)
+        sender ! Success
+      }
+
+    case DeleteActivationCommand(_) =>
+      val index = 0
+      persist(ActivationDeleted(index, meta)) { event =>
+        receiveRecover(event)
+        sender ! Success
       }
   }
 
@@ -150,12 +164,23 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
 
   override def receiveRecover = {
     case SnapshotOffer(metadata, s: ExistingToggleSnapshot) =>
-      val toggle = Toggle(
-        id = toggleId,
-        name = s.name,
-        description = s.description,
-        tags = s.tags,
-        rolloutPercentage = s.rolloutPercentage)
+      val toggle = if(s.rolloutPercentage.nonEmpty) {
+        Toggle(
+          id = toggleId,
+          name = s.name,
+          description = s.description,
+          tags = s.tags,
+          activations = IndexedSeq(ToggleActivation(s.rolloutPercentage)))
+
+      } else {
+        Toggle(
+          id = toggleId,
+          name = s.name,
+          description = s.description,
+          tags = s.tags,
+          activations = fromProtoBuf(s.activations))
+      }
+
       maybeToggle = Some(toggle)
       context.become(existing(toggle))
       eventsSinceSnapshot = 0
@@ -188,8 +213,14 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
     case GlobalRolloutDeleted(_) =>
       updateToggle(_.copy(rolloutPercentage = None))
 
-    case ActivationCreated(p, a, _) =>
-      updateToggle(_.copy(activations = IndexedSeq(ToggleActivation(p, fromEventFormat(a)))))
+    case act @ ActivationCreated(_, p, a, _) =>
+      updateToggle(_.copy(activations = IndexedSeq(ToggleActivation(p, toProtoBuf(a)))))
+
+    case ActivationUpdated(_, p, a, _) =>
+      updateToggle(_.copy(activations = IndexedSeq(ToggleActivation(p, toProtoBuf(a)))))
+
+    case ActivationDeleted(_, _) =>
+      updateToggle(_.copy(activations = IndexedSeq.empty))
   }
 
   def updateToggle(update: Toggle => Toggle) = {
@@ -206,7 +237,7 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
           name = t.name,
           description = t.description,
           tags = t.tags,
-          rolloutPercentage = t.rolloutPercentage)
+          activations = toProtoBuf(t.activations))
       }
       saveSnapshot(snapshot)
     }

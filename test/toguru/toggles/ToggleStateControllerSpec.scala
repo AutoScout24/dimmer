@@ -34,7 +34,7 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
   }
 
   val toggles = Map(
-    "toggle-3" -> ToggleState("toggle-3", activations = IndexedSeq(ToggleActivation(25, Map("country" -> Seq("de-DE", "de-AT"))))),
+    "toggle-3" -> ToggleState("toggle-3", activations = IndexedSeq(ToggleActivation(Some(25), Map("country" -> Seq("de-DE", "de-AT"))))),
     "toggle-2" -> ToggleState("toggle-2", rolloutPercentage = Some(20)),
     "toggle-1" -> ToggleState("toggle-1", Map("team" -> "Toguru team"))
   )

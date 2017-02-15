@@ -1,8 +1,13 @@
 syntax = "proto3";
 
 import "scalapb/scalapb.proto";
+import "google/protobuf/wrappers.proto";
 
 package toguru.toggles;
+
+option (scalapb.options) = {
+  primitive_wrappers: true
+};
 
 message Metadata {
     int64  time = 1;
@@ -49,23 +54,26 @@ message GlobalRolloutDeleted {
 
 message ActivationCreated {
     option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
-    int32 percentage = 1;
-    map<string, CustomAttributeValue> attributes = 2;
-    Metadata meta = 3;
+    int32 index = 1;
+    google.protobuf.Int32Value percentage = 2;
+    map<string, StringSeq> attributes = 3;
+    Metadata meta = 4;
 }
 
 message ActivationUpdated {
     option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
-    int32 percentage = 1;
-    map<string, CustomAttributeValue> attributes = 2;
-    Metadata meta = 3;
+    int32 index = 1;
+    google.protobuf.Int32Value percentage = 2;
+    map<string, StringSeq> attributes = 3;
+    Metadata meta = 4;
 }
 
-message CustomAttributeValue {
+message StringSeq {
     repeated string values = 1;
 }
 
 message ActivationDeleted {
     option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
-    Metadata meta = 1;
+    int32 index = 1;
+    Metadata meta = 2;
 }

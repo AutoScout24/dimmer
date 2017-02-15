@@ -1,13 +1,13 @@
 package toguru.toggles
 
 import java.text.SimpleDateFormat
-
 import javax.inject.{Inject, Named}
 
 import akka.actor.ActorRef
 import akka.util.Timeout
 import akka.pattern.ask
-import play.api.libs.json.{Json, OWrites}
+import play.api.libs.json.{Json, OWrites, Writes}
+import play.api.libs.functional.syntax._
 import play.api.mvc.Controller
 import toguru.app.Config
 import toguru.toggles.events._
@@ -35,7 +35,7 @@ class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: C
   val rolloutUpdatedWrites = Json.writes[GlobalRolloutUpdated]
   val rolloutDeletedWrites = Json.writes[GlobalRolloutDeleted]
 
-  implicit val customAttributeValueWrites = Json.writes[CustomAttributeValue]
+  implicit val stringSeqWrites: Writes[StringSeq] = Writes.seq[String].contramap(_.values)
   val activationCreatedWrites = Json.writes[ActivationCreated]
   val activationUpdatedWrites = Json.writes[ActivationUpdated]
   val activationDeletedWrites = Json.writes[ActivationDeleted]
@@ -57,7 +57,6 @@ class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: C
         case e : ActivationCreated    => fields(id, "activation created") ++ activationCreatedWrites.writes(e)
         case e : ActivationUpdated    => fields(id, "activation updated") ++ activationUpdatedWrites.writes(e)
         case e : ActivationDeleted    => fields(id, "activation deleted") ++ activationDeletedWrites.writes(e)
-
       }
     }
   }

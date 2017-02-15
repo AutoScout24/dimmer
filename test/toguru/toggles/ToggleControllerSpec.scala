@@ -9,12 +9,11 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{AnyContent, Request, Result, Results}
+import play.api.mvc.{Result, Results}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import toguru.app.Config
 import toguru.helpers.AuthorizationHelpers
-import toguru.toggles.Authentication.ApiKey
 import toguru.toggles.ToggleActor._
 import toguru.toggles.ToggleControllerJsonCommands.ActivationBody
 
@@ -22,6 +21,14 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with AuthorizationHelpers {
+
+  trait ToggleControllerSetup {
+    val activationBody = ActivationBody(Some(50), Map("culture" -> Seq("de-DE", "de-AT")))
+
+    val activationRequest = authorizedRequest.withBody(activationBody)
+
+    val okResponseBody = Json.obj("status" -> "Ok")
+  }
 
   val nopActor = Props(new Actor { def receive = { case _ => () } })
 
@@ -55,7 +62,6 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
     (bodyJson \ "status").asOpt[String] mustBe statusString
     bodyJson
   }
-
 
   "get method" should {
     "return toggle for an existing toggle" in {
@@ -231,16 +237,12 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
   }
 
   "create activation" should {
-    "return ok, toggleId and actionId when called" in {
+    "return ok, toggleId and actionId when called" in new ToggleControllerSetup {
       val controller = createController(Props(new Actor {
         def receive = { case _ => sender ! CreateActivationSuccess(0)  }
       }))
 
-      val body = ActivationBody(50, Map("culture" -> Seq("de-DE", "de-AT")))
-
-      val request = authorizedRequest.withBody(body)
-
-      val result = controller.createActivation("toggle-id")().apply(request)
+      val result = controller.createActivation("toggle-id")().apply(activationRequest)
 
       val shouldResponse =  Json.parse("""{ "status": "Ok", "index": 0 }""")
 
@@ -248,11 +250,11 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
       contentAsJson(result) mustBe shouldResponse
     }
 
-    "deny access when no api key given" in {
+    "deny access when no api key given" in new ToggleControllerSetup {
 
       val controller = createController()
 
-      val request = FakeRequest().withBody(ActivationBody(1))
+      val request = FakeRequest().withBody(activationBody)
 
       val result = controller.createActivation("toggle-id")().apply(request)
 
@@ -261,16 +263,12 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
   }
 
   "Update activation" should {
-    "return ok, toggleId and actionId when called" in {
+    "return ok, toggleId and actionId when called" in new ToggleControllerSetup {
       val controller = createController(Props(new Actor {
         def receive = { case _ => sender ! Success }
       }))
 
-      val body = ActivationBody(40, Map("culture" -> Seq("de-DE", "de-AT")))
-
-      val request = authorizedRequest.withBody(body)
-
-      val result = controller.updateActivation("toggle-id", 0)().apply(request)
+      val result = controller.updateActivation("toggle-id", 0)().apply(activationRequest)
 
       val shouldResponse =  Json.parse("""{ "status": "Ok"}""")
 
@@ -278,7 +276,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
       contentAsJson(result) mustBe shouldResponse
     }
 
-    "return accept activation without attributes" in {
+    "accept activation without attributes" in new ToggleControllerSetup {
       var command: Option[UpdateActivationCommand] = None
       val controller = createController(Props(new Actor {
         def receive = { case AuthenticatedCommand(c : UpdateActivationCommand, _) =>
@@ -287,43 +285,37 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
         }
       }))
 
-      val body = ActivationBody(40, Map.empty)
-
-      val request = authorizedRequest.withBody(body)
-
-      val result = controller.updateActivation("toggle-id", 0)().apply(request)
-
-      val shouldResponse =  Json.parse("""{ "status": "Ok"}""")
+      val result = controller.updateActivation("toggle-id", 0)().apply(activationRequest)
 
       status(result) mustBe 200
-      contentAsJson(result) mustBe shouldResponse
-      command.value.percentage mustBe 40
+      contentAsJson(result) mustBe okResponseBody
+      command.value.percentage mustBe Some(50)
     }
 
-    "deny access when no api key given" in {
+    "deny access when no api key given" in new ToggleControllerSetup {
 
       val controller = createController()
 
-      val request = FakeRequest().withBody(ActivationBody(1))
+      val request = FakeRequest().withBody(activationBody)
 
       val result = controller.updateActivation("toggle-id", 0).apply(request)
 
       verifyStatus(result, 401, "Unauthorized")
     }
 
-    "returns not found when toggle does not exist" in {
+    "returns not found when toggle does not exist" in new ToggleControllerSetup {
       val controller = createController(Props(new Actor {
         def receive = { case _ => sender ! ToggleDoesNotExist("toggle") }
       }))
 
-      val result = controller.updateActivation("toggle-id", 0).apply(authorizedRequest.withBody(ActivationBody(1)))
+      val result = controller.updateActivation("toggle-id", 0).apply(activationRequest)
 
       verifyStatus(result, 404, "Not found")
     }
   }
 
   "delete activation" should {
-    "return status ok when toggle is deleted" in {
+    "return status ok when toggle is deleted" in new ToggleControllerSetup {
       var command: Option[DeleteActivationCommand] = None
       val controller = createController(Props(new Actor {
         def receive = { case AuthenticatedCommand(c : DeleteActivationCommand, _) =>
@@ -336,10 +328,8 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
 
       val result = controller.deleteActivation("toggle-id", 0)().apply(request)
 
-      val shouldResponse =  Json.parse("""{ "status": "Ok"}""")
-
       status(result) mustBe 200
-      contentAsJson(result) mustBe shouldResponse
+      contentAsJson(result) mustBe okResponseBody
       command.value.index mustBe 0
     }
 

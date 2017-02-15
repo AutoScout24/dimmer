@@ -9,7 +9,7 @@ import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import toguru.app.Config
-import toguru.toggles.events.{ActivationCreated, CustomAttributeValue, GlobalRolloutCreated, ToggleCreated}
+import toguru.toggles.events._
 import toguru.helpers.AuthorizationHelpers
 import toguru.toggles.AuditLogActor.GetLog
 
@@ -41,7 +41,7 @@ class AuditLogControllerSpec extends PlaySpec with MockitoSugar with Authorizati
       // prepare
       val tags =  Map("team" -> "Toguru team")
       val events = List(
-        AuditLog.Entry("toggle-1", ActivationCreated(25, Map("country" -> CustomAttributeValue(Seq("de-DE", "de-AT"))))),
+        AuditLog.Entry("toggle-1", ActivationCreated(0, Some(25), Map("country" -> StringSeq(Seq("de-DE", "de-AT"))))),
         AuditLog.Entry("toggle-1", GlobalRolloutCreated(20)),
         AuditLog.Entry("toggle-1", ToggleCreated("toggle 1", "first toggle", tags))
       )

@@ -26,8 +26,8 @@ object ToggleStateController {
         (JsPath \ "tags").write[Map[String, String]] and
         (JsPath \ "rolloutPercentage").writeNullable[Int]
       )(ts => (ts.id, ts.tags, {
-      if (ts.rolloutPercentage == None)
-        ts.activations.headOption.map(_.rolloutPercentage)
+      if (ts.rolloutPercentage.isEmpty)
+        ts.activations.headOption.flatMap(_.rolloutPercentage)
       else
       ts.rolloutPercentage
     }))

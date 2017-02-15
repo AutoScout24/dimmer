@@ -9,5 +9,5 @@ case class Toggle(
              rolloutPercentage: Option[Int] = None)
 
 case class ToggleActivation(
-                           rolloutPercentage: Int,
-                           attributes: Map[String,Seq[String]])
+                           rolloutPercentage: Option[Int] = None,
+                           attributes: Map[String,Seq[String]] = Map.empty)

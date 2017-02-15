@@ -66,7 +66,7 @@ class ToggleIntegrationSpec extends PlaySpec
     val name = "toggle 1"
     val toggleId = ToggleActor.toId(name)
     val toggleEndpointURL     = s"http://localhost:$port/toggle"
-    val globalRolloutEndpoint = s"$toggleEndpointURL/$toggleId/globalrollout"
+    val activationsEndpoint   = s"$toggleEndpointURL/$toggleId/activations"
     val toggleEndpoint        = s"$toggleEndpointURL/$toggleId"
     val toggleStateEndpoint   = s"http://localhost:$port/togglestate"
     val auditLogEndpoint      = s"http://localhost:$port/auditlog"
@@ -116,55 +116,58 @@ class ToggleIntegrationSpec extends PlaySpec
       maybeToggle mustBe Some(Toggle(toggleId, name, "toggle description", Map("team" -> "Toguru team")))
     }
 
-    "create a global rollout condition" in {
+    "create an activation condition" in {
       // prepare
-      val body = """{"percentage": 55}"""
+      val body = """{ "rollout": { "percentage": 55} }"""
 
       // execute
-      val createResponse = await(requestWithApiKeyHeader(globalRolloutEndpoint).put(body))
+      val createResponse = await(requestWithApiKeyHeader(activationsEndpoint).post(body))
 
       // verify
       verifyResponseIsOk(createResponse)
 
-      fetchToggle().rolloutPercentage mustBe Some(55)
+      fetchToggle().activations(0).rolloutPercentage mustBe Some(55)
     }
 
-    "update a global rollout condition" in {
+    "update an activation condition" in {
       // prepare
-      val body = """{"percentage": 42}"""
+      val body = """{ "rollout": { "percentage": 42}, "attributes": { "my": [ "value" ] } }"""
 
       // execute
-      val updateResponse = await(requestWithApiKeyHeader(globalRolloutEndpoint).put(body))
+      val updateResponse = await(requestWithApiKeyHeader(s"$activationsEndpoint/0").put(body))
 
       // verify
       verifyResponseIsOk(updateResponse)
 
-      fetchToggle().rolloutPercentage mustBe Some(42)
+      val activation = fetchToggle().activations(0)
+
+      activation.rolloutPercentage mustBe Some(42)
+      activation.attributes mustBe Map("my" -> Seq("value"))
     }
 
-    "reject a global rollout condition that is out of range" in {
+    "reject an activation condition with rollout that is out of range" in {
       // prepare
-      val body = """{"percentage": 101}"""
+      val body = """{ "rollout": { "percentage": 101} }"""
 
       // execute
-      val updateResponse = await(requestWithApiKeyHeader(globalRolloutEndpoint).put(body))
+      val updateResponse = await(requestWithApiKeyHeader(s"$activationsEndpoint/0").put(body))
 
       // verify
       updateResponse.status mustBe BAD_REQUEST
       val json = Json.parse(updateResponse.body)
       (json \ "status").asOpt[String] mustBe Some("Bad Request")
 
-      fetchToggle().rolloutPercentage mustBe Some(42)
+      fetchToggle().activations(0).rolloutPercentage mustBe Some(42)
     }
 
     "delete a global rollout condition" in {
       // execute
-      val createResponse = await(requestWithApiKeyHeader(globalRolloutEndpoint).delete())
+      val createResponse = await(requestWithApiKeyHeader(s"$activationsEndpoint/0").delete())
 
       // verify
       verifyResponseIsOk(createResponse)
 
-      fetchToggle().rolloutPercentage mustBe None
+      fetchToggle().activations mustBe empty
     }
 
     def waitForToggleStates(actor: ActorRef) =
