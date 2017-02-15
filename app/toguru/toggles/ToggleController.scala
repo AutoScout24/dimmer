@@ -99,35 +99,6 @@ class ToggleController(config: Config, provider: ToggleActorProvider) extends Co
     }
   }
 
-  def setGlobalRollout(toggleId: String) = AuthenticatedWithJson.async(json(sampleSetGlobalRollout)) { implicit request =>
-    import play.api.libs.concurrent.Execution.Implicits._
-    val command = authenticated(request.body)
-    implicit val actionId = "set-global-rollout"
-
-    withActor(toggleId) { toggleActor =>
-      (toggleActor ? command).map(
-        both(whenToggleExists, whenPersisted) {
-          case Success =>
-            publishSuccess(actionId, toggleId)
-            Ok(Json.obj("status" -> "Ok"))
-        })
-    }
-  }
-
-  def deleteGlobalRollout(toggleId: String) = AuthenticatedWithJson.async { implicit request =>
-    import play.api.libs.concurrent.Execution.Implicits._
-    implicit val actionId = "delete-global-rollout"
-
-    withActor(toggleId) { toggleActor =>
-      (toggleActor ? authenticated(DeleteGlobalRolloutCommand)).map(
-        both(whenToggleExists, whenPersisted) {
-          case Success =>
-            publishSuccess(actionId, toggleId)
-            Ok(Json.obj("status" -> "Ok"))
-        })
-    }
-  }
-
   def createActivation(toggleId: String) = AuthenticatedWithJson.async(activationBodyParser) { implicit request =>
     import play.api.libs.concurrent.Execution.Implicits._
     implicit val actionId = "create-activation"

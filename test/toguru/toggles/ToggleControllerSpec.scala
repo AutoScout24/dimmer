@@ -183,59 +183,6 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
     }
   }
 
-  "set global rollout condition" should {
-    "return ok when given a set command" in {
-      val controller = createController(Props(new Actor {
-        def receive = { case _ => sender ! Success }
-      }))
-      val request = authorizedRequest.withBody(SetGlobalRolloutCommand(42))
-
-      val result = controller.setGlobalRollout("toggle-id").apply(request)
-
-      verifyStatus(result, 200, "Ok")
-    }
-
-    "returns not found when toggle does not exist" in {
-      val controller = createController(Props(new Actor {
-        override def receive = { case _ => sender ! ToggleDoesNotExist("toggle-id") }
-      }))
-      val request = authorizedRequest.withBody(SetGlobalRolloutCommand(42))
-
-      val result = controller.setGlobalRollout("toggle-id").apply(request)
-
-      verifyStatus(result, 404, "Not found")
-    }
-
-    "deny access when not api key given" in {
-      val controller = createController()
-      val request = FakeRequest().withBody(SetGlobalRolloutCommand(42))
-
-      val result = controller.setGlobalRollout("toggle-id").apply(request)
-
-      verifyStatus(result, 401, "Unauthorized")
-    }
-  }
-
-  "delete global rollout condition" should {
-    "return ok when called" in {
-      val controller = createController(Props(new Actor {
-        def receive = { case _ => sender ! Success }
-      }))
-
-      val result = controller.deleteGlobalRollout("toggle-id")().apply(authorizedRequest)
-
-      verifyStatus(result, 200, "Ok")
-    }
-
-    "deny access when not api key given" in {
-      val controller = createController()
-
-      val result: Future[Result] = controller.deleteGlobalRollout("toggle-id")().apply(FakeRequest())
-
-      verifyStatus(result, 401, "Unauthorized")
-    }
-  }
-
   "create activation" should {
     "return ok, toggleId and actionId when called" in new ToggleControllerSetup {
       val controller = createController(Props(new Actor {
@@ -303,7 +250,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
       verifyStatus(result, 401, "Unauthorized")
     }
 
-    "returns not found when toggle does not exist" in new ToggleControllerSetup {
+    "return not found when toggle does not exist" in new ToggleControllerSetup {
       val controller = createController(Props(new Actor {
         def receive = { case _ => sender ! ToggleDoesNotExist("toggle") }
       }))

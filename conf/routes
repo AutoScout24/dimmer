@@ -15,10 +15,6 @@ PUT        /toggle/:id                              @toguru.toggles.ToggleContro
 
 DELETE     /toggle/:id                              @toguru.toggles.ToggleController.delete(id: String)
 
-PUT        /toggle/:id/globalrollout                @toguru.toggles.ToggleController.setGlobalRollout(id: String)
-
-DELETE     /toggle/:id/globalrollout                @toguru.toggles.ToggleController.deleteGlobalRollout(id: String)
-
 POST       /toggle/:id/activations                  @toguru.toggles.ToggleController.createActivation(id: String)
 
 PUT        /toggle/:id/activations/:activationId    @toguru.toggles.ToggleController.updateActivation(id: String, activationId: Integer)
