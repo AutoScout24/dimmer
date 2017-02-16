@@ -31,11 +31,11 @@ object ToggleActor {
 
   case object AuthenticationMissing
 
-  case class CreateActivationCommand(percentage: Option[Int], attributes: Map[String, Seq[String]] = Map.empty)
+  case class CreateActivationCommand(percentage: Option[Rollout], attributes: Map[String, Seq[String]] = Map.empty)
 
   case class CreateActivationSuccess(index: Int)
 
-  case class UpdateActivationCommand(index: Int, percentage: Option[Int], attributes: Map[String, Seq[String]] = Map.empty)
+  case class UpdateActivationCommand(index: Int, percentage: Option[Rollout], attributes: Map[String, Seq[String]] = Map.empty)
 
   case class DeleteActivationCommand(index: Int)
 
@@ -107,21 +107,21 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
 
     case CreateActivationCommand(p, a) =>
       val index = 0
-      persist(ActivationCreated(index, p, fromProtoBuf(a), meta)) { event =>
+      persist(ActivationCreated(meta, index, toProtoBuf(a), p)) { event =>
         receiveRecover(event)
         sender ! CreateActivationSuccess(index)
       }
 
     case UpdateActivationCommand(_, p, a) =>
       val index = 0
-      persist(ActivationUpdated(index, p, fromProtoBuf(a), meta)) { event =>
+      persist(ActivationUpdated(meta, index, toProtoBuf(a), p)) { event =>
         receiveRecover(event)
         sender ! Success
       }
 
     case DeleteActivationCommand(_) =>
       val index = 0
-      persist(ActivationDeleted(index, meta)) { event =>
+      persist(ActivationDeleted(meta, index)) { event =>
         receiveRecover(event)
         sender ! Success
       }
@@ -149,7 +149,7 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
           name = s.name,
           description = s.description,
           tags = s.tags,
-          activations = IndexedSeq(ToggleActivation(s.rolloutPercentage)))
+          activations = IndexedSeq(ToggleActivation(rollout = s.rolloutPercentage.map(Rollout.apply))))
 
       } else {
         Toggle(
@@ -183,11 +183,11 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
     case ToggleUpdated(name, description, tags, _) =>
       updateToggle(_.copy(name = name, description = description, tags = tags))
 
-    case act @ ActivationCreated(_, p, a, _) =>
-      updateToggle(_.copy(activations = IndexedSeq(ToggleActivation(p, toProtoBuf(a)))))
+    case act @ ActivationCreated(_, _, attrs, r) =>
+      updateToggle(_.copy(activations = IndexedSeq(ToggleActivation(fromProtoBuf(attrs), r))))
 
-    case ActivationUpdated(_, p, a, _) =>
-      updateToggle(_.copy(activations = IndexedSeq(ToggleActivation(p, toProtoBuf(a)))))
+    case ActivationUpdated(_, _, attrs, r) =>
+      updateToggle(_.copy(activations = IndexedSeq(ToggleActivation(fromProtoBuf(attrs), r))))
 
     case ActivationDeleted(_, _) =>
       updateToggle(_.copy(activations = IndexedSeq.empty))

@@ -20,8 +20,8 @@ message ExistingToggleSnapshot {
 }
 
 message ToggleActivationSnapshot {
-    google.protobuf.Int32Value rolloutPercentage = 1;
-    map<string, StringSeq> attributes = 2;
+    map<string, StringSeq> attributes = 1;
+    Rollout rollout = 2;
 }
 
 message DeletedToggleSnapshot {

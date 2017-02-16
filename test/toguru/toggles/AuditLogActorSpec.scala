@@ -13,15 +13,17 @@ class AuditLogActorSpec extends ActorSpec {
 
   def meta(time: Long) = Some(Metadata(time, "testUser"))
 
+  def rollout(p: Int) = Some(Rollout(p))
+
   val events = List(
     Entry("toggle-1", ToggleCreated("toggle 1", "first toggle", Map("team" -> "Toguru team"), meta(0))),
     Entry("toggle-1", ToggleUpdated("toggle 1", "very first toggle", Map("team" -> "Toguru team"), meta(10))),
-    Entry("toggle-1", ActivationCreated(0, None, Map("country" -> StringSeq(Seq("de-DE", "de-AT"))), meta(20))),
-    Entry("toggle-1", ActivationUpdated(0, Some(34), Map("country" -> StringSeq(Seq("de-DE", "de-AT"))), meta(30))),
-    Entry("toggle-1", ActivationDeleted(0, meta(40))),
-    Entry("toggle-1", ActivationCreated(0, Some(10), meta = meta(50))),
-    Entry("toggle-1", ActivationUpdated(0, Some(100), meta = meta(60))),
-    Entry("toggle-1", ActivationDeleted(0, meta(70)))
+    Entry("toggle-1", ActivationCreated(meta(20), 0, Map("country" -> StringSeq(Seq("de-DE", "de-AT"))), None)),
+    Entry("toggle-1", ActivationUpdated(meta(30), 0, Map("country" -> StringSeq(Seq("de-DE", "de-AT"))), rollout(34))),
+    Entry("toggle-1", ActivationDeleted(meta(40), 0)),
+    Entry("toggle-1", ActivationCreated(meta(50), 0, rollout = rollout(10))),
+    Entry("toggle-1", ActivationUpdated(meta(60), 0, rollout = rollout(100))),
+    Entry("toggle-1", ActivationDeleted(meta(70), 0))
   )
 
   def createActor(events: Seq[Entry] = List.empty, time: Long = 0, retentionLength: Int = 10, retentionTime: FiniteDuration = 10.seconds): ActorRef =

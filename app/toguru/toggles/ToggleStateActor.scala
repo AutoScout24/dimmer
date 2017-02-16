@@ -21,6 +21,12 @@ object ToggleState {
 
 }
 
+case class ToggleState(id: String,
+                       tags: Map[String, String] = Map.empty,
+                       activations: IndexedSeq[ToggleActivation] = IndexedSeq.empty)
+
+case class ToggleStates(sequenceNo: Long, toggles: Seq[ToggleState])
+
 object ToggleStateActor {
   case object Shutdown
   case object GetState
@@ -40,14 +46,6 @@ object ToggleStateActor {
     timeout(500.millis, dbConfig.db.run(sql"""SELECT MAX(ordering) FROM journal""".as[Long].head))
   }
 }
-
-case class ToggleState(id: String,
-                       tags: Map[String, String] = Map.empty,
-                       rolloutPercentage: Option[Int] = None,
-                       activations: IndexedSeq[ToggleActivation] = IndexedSeq.empty
-                      )
-
-case class ToggleStates(sequenceNo: Long, toggles: Seq[ToggleState])
 
 class ToggleStateActor(
                         startHook: ActorInitializer,
@@ -113,11 +111,13 @@ class ToggleStateActor(
   def handleEvent(id: String, event: ToggleEvent, offset: Long) = {
     publisher.event("state-actor-toggle-event", "eventType" -> event.getClass.getSimpleName, "readJournalLatencyMs" -> latency(event.meta))
     event match {
-      case ToggleCreated(_, _, tags, _)  => toggles = toggles.updated(id, ToggleState(id, tags, None))
+      case ToggleCreated(_, _, tags, _)  => toggles = toggles.updated(id, ToggleState(id, tags))
       case ToggleUpdated(_, _, tags, _)  => updateToggle(id, _.copy(tags = tags))
       case ToggleDeleted(_)              => toggles = toggles - id
-      case ActivationCreated(_, p, a, _) => updateToggle(id, _.copy(activations = IndexedSeq(ToggleActivation(p, toProtoBuf(a)))))
-      case ActivationUpdated(_, p, a, _) => updateToggle(id, _.copy(activations = IndexedSeq(ToggleActivation(p, toProtoBuf(a)))))
+      case ActivationCreated(_, _, attrs, r) =>
+        updateToggle(id, _.copy(activations = IndexedSeq(ToggleActivation(fromProtoBuf(attrs), r))))
+      case ActivationUpdated(_, _, attrs, r) =>
+        updateToggle(id, _.copy(activations = IndexedSeq(ToggleActivation(fromProtoBuf(attrs), r))))
       case ActivationDeleted(_, _)       => updateToggle(id, _.copy(activations = IndexedSeq.empty))
     }
     lastSequenceNo = offset

@@ -13,6 +13,7 @@ import play.api.mvc._
 import toguru.app.Config
 import toguru.logging.EventPublishing
 import toguru.toggles.ToggleStateActor.{GetState, ToggleStateInitializing}
+import toguru.toggles.events.Rollout
 
 
 
@@ -20,23 +21,20 @@ object ToggleStateController {
   val MimeApiV2 = "application/vnd.toguru.v2+json"
   val MimeApiV3 = "application/vnd.toguru.v3+json"
 
-  val toggleStatesWriterUntilV2: Writes[ToggleStates] = {
-    val toggleStateWriter: Writes[ToggleState] = (
+  val toggleStateWriterUntilV2: Writes[ToggleState] = (
       (JsPath \ "id").write[String] and
-        (JsPath \ "tags").write[Map[String, String]] and
-        (JsPath \ "rolloutPercentage").writeNullable[Int]
-      )(ts => (ts.id, ts.tags, {
-      if (ts.rolloutPercentage.isEmpty)
-        ts.activations.headOption.flatMap(_.rolloutPercentage)
-      else
-      ts.rolloutPercentage
-    }))
-    (
-      (JsPath \ "sequenceNo").write[Long] and
-        (JsPath \ "toggles").write(Writes.seq(toggleStateWriter))
-      )(unlift(ToggleStates.unapply))
-  }
+      (JsPath \ "tags").write[Map[String, String]] and
+      (JsPath \ "rolloutPercentage").writeNullable[Int]
+    )(ts => (ts.id, ts.tags, ts.activations.headOption.flatMap(_.rollout.map(_.percentage)) ))
 
+  val toggleStateSeqWriterUntilV2 = Writes.seq(toggleStateWriterUntilV2)
+
+  val toggleStatesWriterUntilV2: Writes[ToggleStates] = (
+      (JsPath \ "sequenceNo").write[Long] and
+      (JsPath \ "toggles").write(Writes.seq(toggleStateWriterUntilV2))
+    )(unlift(ToggleStates.unapply))
+
+  implicit val rolloutWriter = Json.writes[Rollout]
   implicit val toggleActivationWriter = Json.writes[ToggleActivation]
   implicit val toggleStateWriter = Json.writes[ToggleState]
   implicit val toggleStatesWriter = Json.writes[ToggleStates]
@@ -77,7 +75,7 @@ class ToggleStateController(actor: ActorRef, config: Config, stateRequests: Coun
   }
 
   def responseFor(request: Request[_], toggleStates: ToggleStates) = request match {
-    case Accepts.Json()    => Ok(Json.toJson(toggleStates.toggles))
+    case Accepts.Json()    => Ok(Json.toJson(toggleStates.toggles)(toggleStateSeqWriterUntilV2))
     case AcceptsToguruV2() => Ok(Json.toJson(toggleStates)(toggleStatesWriterUntilV2)).as(MimeApiV2)
     case AcceptsToguruV3() => Ok(Json.toJson(toggleStates)).as(MimeApiV3)
   }

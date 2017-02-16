@@ -14,11 +14,13 @@ class ToggleStateActorSpec extends ActorSpec with WaitFor {
   def createActor(toggles: Map[String, ToggleState] = Map.empty, maxSequenceNo: Long = 0, initialize: Boolean = false): ActorRef =
     system.actorOf(Props(new ToggleStateActor((_,_) => (), (_,_) => Future.successful(maxSequenceNo), ToggleState.Config(initialize), toggles)))
 
+  def rollout(p: Int) = Some(Rollout(p))
+
   def event(id: String, event: ToggleEvent) = EventEnvelope(0, id, 0, event)
 
   val toggles = Map(
     "toggle-1" -> ToggleState("toggle-1", Map("team" -> "Toguru team")),
-    "toggle-2" -> ToggleState("toggle-2", activations = IndexedSeq(ToggleActivation(Some(20))))
+    "toggle-2" -> ToggleState("toggle-2", activations = IndexedSeq(ToggleActivation(rollout = Some(Rollout(20)))))
   )
 
   "toggle state actor" should {
@@ -38,13 +40,13 @@ class ToggleStateActorSpec extends ActorSpec with WaitFor {
       val id3 = "toggle-3"
 
       actor ! event(id1, ToggleCreated("name", "description", Map("team" -> "Toguru team")))
-      actor ! event(id1, ActivationCreated(0, Some(10)))
-      actor ! event(id1, ActivationDeleted(0))
+      actor ! event(id1, ActivationCreated(index = 0, rollout = rollout(10)))
+      actor ! event(id1, ActivationDeleted(index = 0))
 
       actor ! event(id2, ToggleCreated("name", "", Map.empty))
       actor ! event(id2, ToggleUpdated("name", "description", Map.empty))
-      actor ! event(id2, ActivationCreated(0, Some(10)))
-      actor ! event(id2, ActivationUpdated(0, Some(20)))
+      actor ! event(id2, ActivationCreated(index = 0, rollout = rollout(10)))
+      actor ! event(id2, ActivationUpdated(index = 0, rollout = rollout(20)))
 
       actor ! event(id3, ToggleCreated("name", "description", Map.empty))
       actor ! event(id3, ToggleDeleted())

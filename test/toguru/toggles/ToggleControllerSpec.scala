@@ -16,6 +16,7 @@ import toguru.app.Config
 import toguru.helpers.AuthorizationHelpers
 import toguru.toggles.ToggleActor._
 import toguru.toggles.ToggleControllerJsonCommands.ActivationBody
+import toguru.toggles.events.Rollout
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -23,7 +24,7 @@ import scala.concurrent.duration._
 class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with AuthorizationHelpers {
 
   trait ToggleControllerSetup {
-    val activationBody = ActivationBody(Some(50), Map("culture" -> Seq("de-DE", "de-AT")))
+    val activationBody = ActivationBody(Some(Rollout(50)), Map("culture" -> Seq("de-DE", "de-AT")))
 
     val activationRequest = authorizedRequest.withBody(activationBody)
 
@@ -236,7 +237,7 @@ class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with 
 
       status(result) mustBe 200
       contentAsJson(result) mustBe okResponseBody
-      command.value.percentage mustBe Some(50)
+      command.value.percentage mustBe Some(Rollout(50))
     }
 
     "deny access when no api key given" in new ToggleControllerSetup {

@@ -41,11 +41,12 @@ class AuditLogControllerSpec extends PlaySpec with MockitoSugar with Authorizati
       // prepare
       val tags =  Map("team" -> "Toguru team")
       val events = List(
-        AuditLog.Entry("toggle-1", ActivationCreated(0, Some(25), Map("country" -> StringSeq(Seq("de-DE", "de-AT"))))),
-        AuditLog.Entry("toggle-1", ActivationUpdated(0, Some(20))),
+        AuditLog.Entry("toggle-1", ActivationCreated(None, 0, Map("country" -> StringSeq(Seq("de-DE", "de-AT"))), Some(Rollout(25)))),
+        AuditLog.Entry("toggle-1", ActivationUpdated(None, 0, rollout = Some(Rollout(20)))),
         AuditLog.Entry("toggle-1", ToggleCreated("toggle 1", "first toggle", tags))
       )
 
+      implicit val rolloutReads = Json.reads[Rollout]
       implicit val activationReads = Json.reads[ToggleActivation]
       implicit val reads = Json.reads[ToggleState]
 
@@ -63,10 +64,10 @@ class AuditLogControllerSpec extends PlaySpec with MockitoSugar with Authorizati
       log mustBe a[JsArray]
 
       (log(0) \ "id").asOpt[String] mustBe Some("toggle-1")
-      (log(0) \ "percentage" ).asOpt[Int] mustBe Some(25)
+      (log(0) \ "rollout" \ "percentage").asOpt[Int] mustBe Some(25)
 
       (log(1) \ "id").asOpt[String] mustBe Some("toggle-1")
-      (log(1) \ "percentage").asOpt[Int] mustBe Some(20)
+      (log(1) \ "rollout" \ "percentage").asOpt[Int] mustBe Some(20)
 
       (log(2) \ "id").asOpt[String] mustBe Some("toggle-1")
       (log(2) \ "name").asOpt[String] mustBe Some("toggle 1")

@@ -31,6 +31,7 @@ class AuditLogController@Inject()(@Named("audit-log") actor: ActorRef, config: C
   val toggleUpdatedWrites = Json.writes[ToggleUpdated]
   val toggleDeletedWrites = Json.writes[ToggleDeleted]
 
+  implicit val rolloutWrites = Json.writes[Rollout]
   implicit val stringSeqWrites: Writes[StringSeq] = Writes.seq[String].contramap(_.values)
   val activationCreatedWrites = Json.writes[ActivationCreated]
   val activationUpdatedWrites = Json.writes[ActivationUpdated]

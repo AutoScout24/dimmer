@@ -6,16 +6,34 @@ import com.typesafe.config.{Config => TypesafeConfig}
 import org.scalatest.mock.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
-import play.api.libs.functional.syntax._
-import play.api.libs.json.{JsPath, Json, Reads, Writes}
+import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import toguru.app.Config
 import toguru.toggles.ToggleStateActor.{GetState, ToggleStateInitializing}
+import toguru.toggles.events.Rollout
 
 import scala.concurrent.duration._
 
+
+object ToggleStateControllerSpec {
+  implicit class MyFakeRequest[A](val request: FakeRequest[A]) extends AnyVal {
+    def withAccept(mimeType: String) = request.withHeaders(HeaderNames.ACCEPT -> mimeType)
+  }
+
+  case class ToggleStatesV2(sequenceNo: Long, toggles: Seq[ToggleStateV2])
+
+  def stateV2(s: ToggleState) =
+    ToggleStateV2(s.id, s.tags, s.activations.headOption.flatMap(_.rollout.map(_.percentage)))
+
+  case class ToggleStateV2(id: String,
+                           tags: Map[String, String] = Map.empty,
+                           rolloutPercentage: Option[Int] = None)
+}
+
 class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
+  import ToggleStateControllerSpec._
+
 
   def createController(props: Props): ToggleStateController = {
     val config = new Config {
@@ -34,8 +52,9 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
   }
 
   val toggles = Map(
-    "toggle-3" -> ToggleState("toggle-3", activations = IndexedSeq(ToggleActivation(Some(25), Map("country" -> Seq("de-DE", "de-AT"))))),
-    "toggle-2" -> ToggleState("toggle-2", rolloutPercentage = Some(20)),
+    "toggle-3" -> ToggleState("toggle-3",
+      activations = IndexedSeq(ToggleActivation(Map("country" -> Seq("de-DE", "de-AT")), Some(Rollout(25))))),
+    "toggle-2" -> ToggleState("toggle-2"),
     "toggle-1" -> ToggleState("toggle-1", Map("team" -> "Toguru team"))
   )
 
@@ -45,8 +64,7 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
   "get method" should {
     "return list of toggle states fetched from actor" in {
       // prepare
-      implicit val activationReads = Json.reads[ToggleActivation]
-      implicit val reads = Json.reads[ToggleState]
+      implicit val reads = Json.reads[ToggleStateV2]
 
       val controller: ToggleStateController = createController(toggleStateActorProps(toggles))
 
@@ -57,25 +75,24 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
 
       // verify
       status(result) mustBe 200
-      val state = contentAsJson(result).as[Seq[ToggleState]]
 
-      state mustBe Seq(
-        toggles("toggle-1"),
-        toggles("toggle-2"),
-        toggles("toggle-3")
-      )
+      val state = contentAsJson(result).as[Seq[ToggleStateV2]]
+
+      val expectedToggles = (1 to 3).map(i => stateV2(toggles(s"toggle-$i")))
+
+      state mustBe expectedToggles
     }
 
     "return version specific format V3" in {
       // prepare
+      implicit val rolloutReads = Json.reads[Rollout]
       implicit val activationReads = Json.reads[ToggleActivation]
       implicit val toggleReads = Json.reads[ToggleState]
-
       implicit val reads = Json.reads[ToggleStates]
 
       val controller: ToggleStateController = createController(toggleStateActorProps(toggles))
 
-      val request = FakeRequest().withHeaders(HeaderNames.ACCEPT -> ToggleStateController.MimeApiV3)
+      val request = FakeRequest().withAccept(ToggleStateController.MimeApiV3)
 
       // execute
       val result = controller.get(Some(9)).apply(request)
@@ -93,36 +110,24 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
 
     "return version specific format V2" in {
       // prepare
-      implicit val activationReads = Json.reads[ToggleActivation]
-
-      val toggleStatesV2Reads: Reads[ToggleStates] = {
-        val toggleStateReades: Reads[ToggleState] = (
-          (JsPath \ "id").read[String] and
-            (JsPath \ "tags").read[Map[String, String]] and
-            (JsPath \ "rolloutPercentage").readNullable[Int]
-          ) ((id, tags, p) => ToggleState(id, tags, rolloutPercentage = p))
-
-        (
-          (JsPath \ "sequenceNo").read[Long] and
-            (JsPath \ "toggles").read[Seq[ToggleState]](Reads.seq(toggleStateReades))
-          ) ((sequenceNo, toggles) => ToggleStates(sequenceNo, toggles))
-      }
+      implicit val toggleV2Reads = Json.reads[ToggleStateV2]
+      val togglesV2Reads = Json.reads[ToggleStatesV2]
 
       val controller: ToggleStateController = createController(toggleStateActorProps(toggles))
 
-      val request = FakeRequest().withHeaders(HeaderNames.ACCEPT -> ToggleStateController.MimeApiV2)
+      val request = FakeRequest().withAccept(ToggleStateController.MimeApiV2)
 
       // execute
       val result = controller.get(Some(9)).apply(request)
 
       // verify
       status(result) mustBe 200
-      val states = contentAsJson(result).as[ToggleStates](toggleStatesV2Reads)
+      val states = contentAsJson(result).as(togglesV2Reads)
 
       states.toggles mustBe Seq(
-        toggles("toggle-1"),
-        toggles("toggle-2"),
-        toggles("toggle-3").copy(activations = IndexedSeq.empty, rolloutPercentage = Some(25))
+        ToggleStateV2("toggle-1", Map("team" -> "Toguru team")),
+        ToggleStateV2("toggle-2"),
+        ToggleStateV2("toggle-3", rolloutPercentage = Some(25))
       )
     }
 

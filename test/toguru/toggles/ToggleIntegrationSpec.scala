@@ -16,6 +16,7 @@ import toguru.app.Config
 import toguru.helpers.PostgresSetup
 import toguru.toggles.AuditLogActor.GetLog
 import toguru.toggles.ToggleStateActor.{GetState, ToggleStateInitializing}
+import toguru.toggles.events.Rollout
 
 import scala.concurrent.duration._
 
@@ -126,7 +127,7 @@ class ToggleIntegrationSpec extends PlaySpec
       // verify
       verifyResponseIsOk(createResponse)
 
-      fetchToggle().activations(0).rolloutPercentage mustBe Some(55)
+      fetchToggle().activations(0).rollout mustBe Some(Rollout(55))
     }
 
     "update an activation condition" in {
@@ -141,7 +142,7 @@ class ToggleIntegrationSpec extends PlaySpec
 
       val activation = fetchToggle().activations(0)
 
-      activation.rolloutPercentage mustBe Some(42)
+      activation.rollout mustBe Some(Rollout(42))
       activation.attributes mustBe Map("my" -> Seq("value"))
     }
 
@@ -157,7 +158,7 @@ class ToggleIntegrationSpec extends PlaySpec
       val json = Json.parse(updateResponse.body)
       (json \ "status").asOpt[String] mustBe Some("Bad Request")
 
-      fetchToggle().activations(0).rolloutPercentage mustBe Some(42)
+      fetchToggle().activations(0).rollout mustBe Some(Rollout(42))
     }
 
     "delete a global rollout condition" in {

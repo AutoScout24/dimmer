@@ -29,18 +29,20 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
     val toggle = Toggle(toggleId, "name","description")
     val createCmd = CreateToggleCommand(toggle.name, toggle.description, toggle.tags)
     val updateCmd = UpdateToggleCommand(None, Some("new description"), Some(Map("services" -> "toguru")))
-    val createActivationCmd = CreateActivationCommand(Some(42))
+    val createActivationCmd = CreateActivationCommand(percentage = Some(Rollout(42)))
     val create = authenticated(createCmd)
     val update = authenticated(updateCmd)
     val delete = authenticated(DeleteToggleCommand)
     val createActivation = authenticated(createActivationCmd)
-    val updateActivationCmd = UpdateActivationCommand(0, Some(55), Map("a" -> Seq("b")))
+    val updateActivationCmd = UpdateActivationCommand(0, percentage = Some(Rollout(55)), Map("a" -> Seq("b")))
     val updateActivation = authenticated(updateActivationCmd)
     val deleteActivation = authenticated(DeleteActivationCommand(0))
 
     def createActor(toggle: Option[Toggle] = None) = system.actorOf(Props(new ToggleActor(toggleId, toggle)))
 
     def fetchToggle(actor: ActorRef): Toggle = await(actor ? GetToggle).asInstanceOf[Some[Toggle]].get
+
+    def primaryRollout(toggle: Toggle): Option[Rollout] = toggle.activations(0).rollout
 
     def snapshotSequenceNr(maxSequenceNr: Long = 100): Option[Long] =
       await(StorageExtension(system).snapshotStorage ? SnapshotForMaxSequenceNr(toggleId, maxSequenceNr)).asInstanceOf[Option[snapshotEntry]].map(_.sequenceNumber)
@@ -129,7 +131,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       response mustBe CreateActivationSuccess(0)
 
       val actorToggle = await(actor ? GetToggle).asInstanceOf[Some[Toggle]].get
-      actorToggle.activations(0).rolloutPercentage mustBe createActivationCmd.percentage
+      actorToggle.activations(0).rollout mustBe createActivationCmd.percentage
     }
 
     "update activation condition when receiving command" in new ToggleActorSetup {
@@ -139,7 +141,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
 
       val fToggle = fetchToggle(actor)
       fToggle.activations must have length (1)
-      fToggle.activations(0).rolloutPercentage mustBe updateActivation.command.percentage
+      primaryRollout(fToggle) mustBe updateActivation.command.percentage
     }
 
     "reject set global rollout condition command when toggle does not exists" in new ToggleActorSetup {
@@ -164,11 +166,12 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
 
     "create activations when receiving command" in new ToggleActorSetup {
       val actor = createActor(Some(toggle))
-      val cmd = authenticated(CreateActivationCommand(Some(53), Map("culture" -> Seq("de-DE", "de-AT"))))
-      val response = await(actor ? cmd)
+
+      val response = await(actor ? createActivation)
+
       response mustBe CreateActivationSuccess(0)
       val activation = fetchToggle(actor).activations(0)
-      activation mustBe ToggleActivation(Some(53), Map("culture" -> Seq("de-DE", "de-AT")))
+      activation mustBe ToggleActivation(createActivationCmd.attributes, createActivationCmd.percentage)
     }
 
     "persist toggle events" in new ToggleActorSetup {
@@ -187,17 +190,11 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       val eventualEnvelopes = readJournal.currentEventsByPersistenceId(toggleId, 0, 100).runWith(Sink.seq)
       val events = await(eventualEnvelopes).map(_.event)
       val meta = Some(Metadata(0, testUser))
-      val expectedEvents = Seq(
-        ToggleCreated(toggle.name, toggle.description, toggle.tags, meta),
-        ActivationCreated(0, createActivationCmd.percentage),
-        ActivationUpdated(0, updateActivationCmd.percentage, fromProtoBuf(updateActivationCmd.attributes), meta),
-        ActivationDeleted(0, meta)
-      )
 
       events(0) mustBe ToggleCreated(toggle.name, toggle.description, toggle.tags, meta)
-      events(1) mustBe ActivationCreated(0, createActivationCmd.percentage, Map.empty, meta)
-      events(2) mustBe ActivationUpdated(0, updateActivationCmd.percentage, fromProtoBuf(updateActivationCmd.attributes), meta)
-      events(3) mustBe ActivationDeleted(0, meta)
+      events(1) mustBe ActivationCreated(meta, 0, rollout = createActivationCmd.percentage)
+      events(2) mustBe ActivationUpdated(meta, 0, toProtoBuf(updateActivationCmd.attributes), updateActivationCmd.percentage)
+      events(3) mustBe ActivationDeleted(meta, 0)
     }
 
     "save snapshots every 10 events" in new ToggleActorSetup {
@@ -241,7 +238,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       val newToggle = fetchToggle(newActor)
 
       newToggle.name mustBe toggle.name
-      newToggle.activations(0).rolloutPercentage mustBe createActivation.command.percentage
+      primaryRollout(newToggle) mustBe createActivation.command.percentage
     }
 
     "reject create toggle after recovering existing toggle from snapshot" in new ToggleActorSetup {

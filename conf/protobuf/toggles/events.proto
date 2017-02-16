@@ -54,18 +54,22 @@ message GlobalRolloutDeleted {
 
 message ActivationCreated {
     option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
-    int32 index = 1;
-    google.protobuf.Int32Value percentage = 2;
+    Metadata meta = 1;
+    int32 index = 2;
     map<string, StringSeq> attributes = 3;
-    Metadata meta = 4;
+    Rollout rollout = 4;
 }
 
 message ActivationUpdated {
     option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
-    int32 index = 1;
-    google.protobuf.Int32Value percentage = 2;
+    Metadata meta = 1;
+    int32 index = 2;
     map<string, StringSeq> attributes = 3;
-    Metadata meta = 4;
+    Rollout rollout = 4;
+}
+
+message Rollout {
+    int32 percentage = 1;
 }
 
 message StringSeq {
@@ -74,6 +78,6 @@ message StringSeq {
 
 message ActivationDeleted {
     option (scalapb.message).extends = "toguru.toggles.ToggleEvent";
-    int32 index = 1;
-    Metadata meta = 2;
+    Metadata meta = 1;
+    int32 index = 2;
 }

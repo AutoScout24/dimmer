@@ -58,8 +58,10 @@ class ToggleEventProtoBufSerializer extends SerializerWithStringManifest {
     case e: ToggleEvent => e.toByteArray
   }
 
-  def toActivation(e: GlobalRolloutCreated) = ActivationCreated(percentage = Some(e.percentage), meta = e.meta)
-  def toActivation(e: GlobalRolloutUpdated) = ActivationUpdated(percentage = Some(e.percentage), meta = e.meta)
+  def asRollout(percentage: Int) = Some(Rollout(percentage))
+
+  def toActivation(e: GlobalRolloutCreated) = ActivationCreated(rollout = asRollout(e.percentage), meta = e.meta)
+  def toActivation(e: GlobalRolloutUpdated) = ActivationUpdated(rollout = asRollout(e.percentage), meta = e.meta)
   def toActivation(e: GlobalRolloutDeleted) = ActivationDeleted(meta = e.meta)
 }
 
