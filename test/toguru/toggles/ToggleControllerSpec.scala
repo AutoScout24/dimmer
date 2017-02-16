@@ -24,7 +24,7 @@ import scala.concurrent.duration._
 class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with AuthorizationHelpers {
 
   trait ToggleControllerSetup {
-    val activationBody = ActivationBody(Some(Rollout(50)), Map("culture" -> Seq("de-DE", "de-AT")))
+    val activationBody = ActivationBody(Map("culture" -> Seq("de-DE", "de-AT")), Some(Rollout(50)))
 
     val activationRequest = authorizedRequest.withBody(activationBody)
 
