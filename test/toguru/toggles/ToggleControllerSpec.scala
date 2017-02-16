@@ -5,15 +5,13 @@ import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.{Config => TypesafeConfig}
-import org.scalatest.mock.MockitoSugar
-import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Result, Results}
+import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import toguru.app.Config
-import toguru.helpers.AuthorizationHelpers
+import toguru.helpers.ControllerSpec
 import toguru.toggles.ToggleActor._
 import toguru.toggles.ToggleControllerJsonCommands.ActivationBody
 import toguru.toggles.events.Rollout
@@ -21,7 +19,7 @@ import toguru.toggles.events.Rollout
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class ToggleControllerSpec extends PlaySpec with Results with MockitoSugar with AuthorizationHelpers {
+class ToggleControllerSpec extends ControllerSpec {
 
   trait ToggleControllerSetup {
     val activationBody = ActivationBody(Map("culture" -> Seq("de-DE", "de-AT")), Some(Rollout(50)))

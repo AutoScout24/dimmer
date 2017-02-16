@@ -1,4 +1,4 @@
-package toguru.toggles
+package toguru.helpers
 
 import akka.actor.ActorSystem
 import akka.persistence.inmemory.extension._
@@ -17,7 +17,8 @@ trait ActorSpec extends PlaySpec
   with BeforeAndAfterAll
   with BeforeAndAfterEach
   with FutureAwaits
-  with DefaultAwaitTimeout {
+  with DefaultAwaitTimeout
+  with DisabledLogging {
 
   implicit override def defaultAwaitTimeout = 1000.millis
 

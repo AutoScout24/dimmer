@@ -3,13 +3,12 @@ package toguru.toggles
 import akka.actor.{Actor, ActorSystem, Props}
 import com.codahale.metrics.Counter
 import com.typesafe.config.{Config => TypesafeConfig}
-import org.scalatest.mock.MockitoSugar
-import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import toguru.app.Config
+import toguru.helpers.ControllerSpec
 import toguru.toggles.ToggleStateActor.{GetState, ToggleStateInitializing}
 import toguru.toggles.events.Rollout
 
@@ -31,7 +30,7 @@ object ToggleStateControllerSpec {
                            rolloutPercentage: Option[Int] = None)
 }
 
-class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
+class ToggleStateControllerSpec extends ControllerSpec {
   import ToggleStateControllerSpec._
 
 
@@ -140,6 +139,7 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
       // execute
       val result = controller.get(Some(11)).apply(request)
 
+      // verify
       status(result) mustBe 500
     }
 
@@ -153,6 +153,7 @@ class ToggleStateControllerSpec extends PlaySpec with MockitoSugar {
       // execute
       val result = controller.get(Some(10)).apply(request)
 
+      // verify
       status(result) mustBe 500
     }
   }

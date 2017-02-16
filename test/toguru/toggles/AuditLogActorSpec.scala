@@ -3,6 +3,7 @@ package toguru.toggles
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.persistence.query.EventEnvelope
+import toguru.helpers.ActorSpec
 import toguru.toggles.AuditLog.Entry
 import toguru.toggles.AuditLogActor._
 import toguru.toggles.events._

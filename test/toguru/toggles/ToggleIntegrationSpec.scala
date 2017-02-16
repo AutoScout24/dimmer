@@ -234,6 +234,7 @@ class ToggleIntegrationSpec extends PlaySpec
     }
 
     "return current audit log" in {
+      // prepare
       val auditLogSize = 7
       val actor = getActor("audit-log")
 
@@ -254,7 +255,7 @@ class ToggleIntegrationSpec extends PlaySpec
     }
 
     "allow to re-create a deleted toggle" in {
-      // execute
+      // prepare
       val body = toggleAsString(name)
 
       // execute
