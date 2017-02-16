@@ -21,7 +21,7 @@ import scala.concurrent.duration._
 
 class ToggleControllerSpec extends ControllerSpec {
 
-  trait ToggleControllerSetup {
+  trait Setup {
     val activationBody = ActivationBody(Map("culture" -> Seq("de-DE", "de-AT")), Some(Rollout(50)))
 
     val activationRequest = authorizedRequest.withBody(activationBody)
@@ -183,7 +183,7 @@ class ToggleControllerSpec extends ControllerSpec {
   }
 
   "create activation" should {
-    "return ok, toggleId and actionId when called" in new ToggleControllerSetup {
+    "return ok, toggleId and actionId when called" in new Setup {
       val controller = createController(Props(new Actor {
         def receive = { case _ => sender ! CreateActivationSuccess(0)  }
       }))
@@ -196,7 +196,7 @@ class ToggleControllerSpec extends ControllerSpec {
       contentAsJson(result) mustBe shouldResponse
     }
 
-    "deny access when no api key given" in new ToggleControllerSetup {
+    "deny access when no api key given" in new Setup {
 
       val controller = createController()
 
@@ -209,7 +209,7 @@ class ToggleControllerSpec extends ControllerSpec {
   }
 
   "Update activation" should {
-    "return ok, toggleId and actionId when called" in new ToggleControllerSetup {
+    "return ok, toggleId and actionId when called" in new Setup {
       val controller = createController(Props(new Actor {
         def receive = { case _ => sender ! Success }
       }))
@@ -222,7 +222,7 @@ class ToggleControllerSpec extends ControllerSpec {
       contentAsJson(result) mustBe shouldResponse
     }
 
-    "accept activation without attributes" in new ToggleControllerSetup {
+    "accept activation without attributes" in new Setup {
       var command: Option[UpdateActivationCommand] = None
       val controller = createController(Props(new Actor {
         def receive = { case AuthenticatedCommand(c : UpdateActivationCommand, _) =>
@@ -238,7 +238,7 @@ class ToggleControllerSpec extends ControllerSpec {
       command.value.percentage mustBe Some(Rollout(50))
     }
 
-    "deny access when no api key given" in new ToggleControllerSetup {
+    "deny access when no api key given" in new Setup {
 
       val controller = createController()
 
@@ -249,7 +249,7 @@ class ToggleControllerSpec extends ControllerSpec {
       verifyStatus(result, 401, "Unauthorized")
     }
 
-    "return not found when toggle does not exist" in new ToggleControllerSetup {
+    "return not found when toggle does not exist" in new Setup {
       val controller = createController(Props(new Actor {
         def receive = { case _ => sender ! ToggleDoesNotExist("toggle") }
       }))
@@ -261,7 +261,7 @@ class ToggleControllerSpec extends ControllerSpec {
   }
 
   "delete activation" should {
-    "return status ok when toggle is deleted" in new ToggleControllerSetup {
+    "return status ok when toggle is deleted" in new Setup {
       var command: Option[DeleteActivationCommand] = None
       val controller = createController(Props(new Actor {
         def receive = { case AuthenticatedCommand(c : DeleteActivationCommand, _) =>

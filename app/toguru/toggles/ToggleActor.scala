@@ -65,7 +65,7 @@ class ToggleActor(toggleId: String, var maybeToggle: Option[Toggle] = None) exte
 
   var eventsSinceSnapshot = 0
 
-   override def receiveCommand = maybeToggle.fold(initial)(existing)
+  override def receiveCommand = maybeToggle.fold(initial)(existing)
 
   def existing(t: Toggle): Receive = globalCommands.orElse(snapshotCommands).orElse(withMetadata(m => existingToggle(t, m)))
 

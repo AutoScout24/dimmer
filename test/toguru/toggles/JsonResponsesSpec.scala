@@ -26,7 +26,7 @@ class JsonResponsesSpec extends PlaySpec with FutureAwaits with DefaultAwaitTime
 
   implicit val mat = ActorMaterializer()
 
-  trait JsonResponsesSetup extends JsonResponses {
+  trait Setup extends JsonResponses {
 
     val sample = TestData("name", 3, Map("one" -> "1"))
 
@@ -40,12 +40,12 @@ class JsonResponsesSpec extends PlaySpec with FutureAwaits with DefaultAwaitTime
   }
 
   "json body parser" should {
-    "parse valid json request body" in new JsonResponsesSetup {
+    "parse valid json request body" in new Setup {
       val parsed = parse(sample, format, Json.toJson(sample).toString)
       parsed mustBe Right(sample)
     }
 
-    "reject invalid json request body" in new JsonResponsesSetup {
+    "reject invalid json request body" in new Setup {
       val parsed = parse(sample, format, """{ "wrong" : true }""")
       parsed mustBe a[Left[_,_]]
     }

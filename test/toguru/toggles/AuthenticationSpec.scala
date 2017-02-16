@@ -8,7 +8,7 @@ import toguru.toggles.Authentication._
 
 class AuthenticationSpec extends PlaySpec {
 
-  trait AuthenticationSetup extends Authentication {
+  trait Setup extends Authentication {
     val testKeyString = "valid-key"
     val testKey   = ApiKey("test", testKeyString.bcrypt)
     val principal = ApiKeyPrincipal(testKey.name)
@@ -24,37 +24,37 @@ class AuthenticationSpec extends PlaySpec {
 
   "extractPrincipal" when {
     "authentication is enabled" should {
-      "extract principal from authenticated request" in new AuthenticationSetup {
+      "extract principal from authenticated request" in new Setup {
         extractPrincipal(enabledConfig, authenticatedRequest) mustBe Some(principal)
       }
 
-      "reject request with wrong key" in new AuthenticationSetup {
+      "reject request with wrong key" in new Setup {
         extractPrincipal(enabledConfig, badKeyRequest) mustBe None
       }
 
-      "reject request with wrong header" in new AuthenticationSetup {
+      "reject request with wrong header" in new Setup {
         extractPrincipal(enabledConfig, badHeaderRequest) mustBe None
       }
 
-      "reject request without key" in new AuthenticationSetup {
+      "reject request without key" in new Setup {
         extractPrincipal(enabledConfig, missingHeaderRequest) mustBe None
       }
     }
 
     "authentication is disabled" should {
-      "extract principal from authenticated request" in new AuthenticationSetup {
+      "extract principal from authenticated request" in new Setup {
         extractPrincipal(disabledConfig, authenticatedRequest) mustBe Some(principal)
       }
 
-      "reject request with wrong key" in new AuthenticationSetup {
+      "reject request with wrong key" in new Setup {
         extractPrincipal(disabledConfig, badKeyRequest) mustBe None
       }
 
-      "reject request with wrong header" in new AuthenticationSetup {
+      "reject request with wrong header" in new Setup {
         extractPrincipal(disabledConfig, badHeaderRequest) mustBe None
       }
 
-      "accept request without key" in new AuthenticationSetup {
+      "accept request without key" in new Setup {
         extractPrincipal(disabledConfig, missingHeaderRequest) mustBe Some(DevUser)
       }
     }

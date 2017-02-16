@@ -6,7 +6,7 @@ import toguru.toggles.ToggleActor.{PersistFailed, Success, ToggleDoesNotExist}
 
 class ToggleActorResponsesSpec extends PlaySpec {
 
-  trait ToggleActorResponsesSetup extends ToggleActorResponses {
+  trait Setup extends ToggleActorResponses {
 
     val handler: ResponseHandler = { _ => Ok("")}
 
@@ -20,14 +20,14 @@ class ToggleActorResponsesSpec extends PlaySpec {
   }
 
   "whenPersisted" should {
-    "return internal server error on persistence errors" in new ToggleActorResponsesSetup {
+    "return internal server error on persistence errors" in new Setup {
 
       val response: Result = persistHandler.apply(failure)
 
       response.header.status mustBe 500
     }
 
-    "pass message to handler on success" in new ToggleActorResponsesSetup {
+    "pass message to handler on success" in new Setup {
 
       val response: Result = persistHandler.apply(Success)
 
@@ -36,14 +36,14 @@ class ToggleActorResponsesSpec extends PlaySpec {
   }
 
   "whenToggleExists" should {
-    "return internal server error on persistence errors" in new ToggleActorResponsesSetup {
+    "return internal server error on persistence errors" in new Setup {
 
       val response: Result = existsHandler.apply(doesntExist)
 
       response.header.status mustBe 404
     }
 
-    "pass message to handler on success" in new ToggleActorResponsesSetup {
+    "pass message to handler on success" in new Setup {
 
       val response: Result = existsHandler.apply(Success)
 

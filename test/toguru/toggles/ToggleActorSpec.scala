@@ -7,24 +7,28 @@ import akka.persistence.inmemory.extension.StorageExtension
 import akka.persistence.inmemory.snapshotEntry
 import akka.persistence.query.PersistenceQuery
 import akka.persistence.query.scaladsl._
+import akka.persistence.{DeleteSnapshotFailure, SaveSnapshotFailure, SnapshotMetadata, SnapshotOffer}
 import akka.stream.scaladsl._
+import akka.testkit.TestActorRef
 import toguru.helpers.ActorSpec
 import toguru.toggles.Authentication.ApiKeyPrincipal
 import toguru.toggles.ToggleActor._
 import toguru.toggles.events._
+import toguru.toggles.snapshots.ExistingToggleSnapshot
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class ToggleActorSpec extends ActorSpec with WaitFor {
 
-  trait ToggleActorSetup {
+  trait Setup {
 
     val testUser = "test-user"
 
     def authenticated[T](command: T) = AuthenticatedCommand(command, ApiKeyPrincipal(testUser))
 
     val snapshotTimeout = 10.seconds
+    val snapshotMetadata = SnapshotMetadata("", 0, 0)
 
     val toggleId = "toggle-1"
     val toggle = Toggle(toggleId, "name","description")
@@ -41,6 +45,8 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
 
     def createActor(toggle: Option[Toggle] = None) = system.actorOf(Props(new ToggleActor(toggleId, toggle)))
 
+    def createTestActor() = TestActorRef[ToggleActor](Props(new ToggleActor(toggleId, None))).underlyingActor
+
     def fetchToggle(actor: ActorRef): Toggle = await(actor ? GetToggle).asInstanceOf[Some[Toggle]].get
 
     def primaryRollout(toggle: Toggle): Option[Rollout] = toggle.activations(0).rollout
@@ -50,7 +56,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
   }
 
   "actor" should {
-    "create toggle when receiving command in initial state" in new ToggleActorSetup {
+    "create toggle when receiving command in initial state" in new Setup {
       // prepare
       val actor = createActor()
 
@@ -62,7 +68,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       fetchToggle(actor) mustBe toggle
     }
 
-    "reject create command when toggle exists" in new ToggleActorSetup {
+    "reject create command when toggle exists" in new Setup {
       // prepare
       val actor = createActor(Some(toggle))
 
@@ -73,7 +79,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       response mustBe ToggleAlreadyExists(toggleId)
     }
 
-    "reject create command when authentication is missing" in new ToggleActorSetup {
+    "reject create command when authentication is missing" in new Setup {
       // prepare
       val actor = createActor()
 
@@ -84,7 +90,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       response mustBe AuthenticationMissing
     }
 
-    "update toggle when toggle exists" in new ToggleActorSetup {
+    "update toggle when toggle exists" in new Setup {
       // prepare
       val actor = createActor(Some(toggle))
 
@@ -96,7 +102,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       fetchToggle(actor) mustBe Toggle(toggleId, toggle.name, updateCmd.description.get, updateCmd.tags.get)
     }
 
-    "keeps toggle description and tags when updating names" in new ToggleActorSetup {
+    "keeps toggle description and tags when updating names" in new Setup {
       // prepare
       val actor = createActor(Some(toggle))
       override val updateCmd = UpdateToggleCommand(Some("new name"), None, None)
@@ -109,7 +115,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       fetchToggle(actor) mustBe Toggle(toggleId, updateCmd.name.get, toggle.description, toggle.tags)
     }
 
-    "reject update when toggle does not exist" in new ToggleActorSetup {
+    "reject update when toggle does not exist" in new Setup {
       // prepare
       val actor = createActor()
 
@@ -120,7 +126,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       response mustBe ToggleDoesNotExist(toggleId)
     }
 
-    "reject update when authentication is missing" in new ToggleActorSetup {
+    "reject update when authentication is missing" in new Setup {
       // prepare
       val actor = createActor(Some(toggle))
 
@@ -131,7 +137,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       response mustBe AuthenticationMissing
     }
 
-    "delete toggle when toggle exists" in new ToggleActorSetup {
+    "delete toggle when toggle exists" in new Setup {
       // prepare
       val actor = createActor(Some(toggle))
 
@@ -143,7 +149,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       await(actor ? GetToggle) mustBe None
     }
 
-    "reject delete when toggle does not exist" in new ToggleActorSetup {
+    "reject delete when toggle does not exist" in new Setup {
       // prepare
       val actor = createActor()
 
@@ -154,7 +160,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       response mustBe ToggleDoesNotExist(toggleId)
     }
 
-    "allow to re-create toggle after delete" in new ToggleActorSetup {
+    "allow to re-create toggle after delete" in new Setup {
       // prepare
       val actor = createActor(Some(toggle.copy(name = "initial toggle name")))
       actor ? delete
@@ -167,7 +173,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       fetchToggle(actor) mustBe toggle
     }
 
-    "create activation condition when receiving command" in new ToggleActorSetup {
+    "create activation condition when receiving command" in new Setup {
       // prepare
       val actor = createActor(Some(toggle))
 
@@ -180,7 +186,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       actorToggle.activations(0).rollout mustBe createActivationCmd.percentage
     }
 
-    "update activation condition when receiving command" in new ToggleActorSetup {
+    "update activation condition when receiving command" in new Setup {
       // prepare
       val actor = createActor(Some(toggle.copy(rolloutPercentage = Some(55))))
 
@@ -194,7 +200,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       primaryRollout(fToggle) mustBe updateActivation.command.percentage
     }
 
-    "reject set global rollout condition command when toggle does not exists" in new ToggleActorSetup {
+    "reject set global rollout condition command when toggle does not exists" in new Setup {
       // prepare
       val actor = createActor()
 
@@ -205,7 +211,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       response mustBe ToggleDoesNotExist(toggleId)
     }
 
-    "delete activation when receiving command" in new ToggleActorSetup {
+    "delete activation when receiving command" in new Setup {
       // prepare
       val actor = createActor(Some(toggle.copy(rolloutPercentage = Some(42))))
 
@@ -217,7 +223,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       fetchToggle(actor).activations mustBe empty
     }
 
-    "return success on delete when rollout condition does not exist" in new ToggleActorSetup {
+    "return success on delete when rollout condition does not exist" in new Setup {
       // prepare
       val actor = createActor(Some(toggle))
 
@@ -228,7 +234,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       response mustBe Success
     }
 
-    "create activations when receiving command" in new ToggleActorSetup {
+    "create activations when receiving command" in new Setup {
       // prepare
       val actor = createActor(Some(toggle))
 
@@ -241,7 +247,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       activation mustBe ToggleActivation(createActivationCmd.attributes, createActivationCmd.percentage)
     }
 
-    "persist toggle events" in new ToggleActorSetup {
+    "persist toggle events" in new Setup {
       // prepare
       val actor = system.actorOf(Props(new ToggleActor(toggleId, None) {
         override def time() = 0
@@ -267,7 +273,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       events(3) mustBe ActivationDeleted(meta, 0)
     }
 
-    "save snapshots every 10 events" in new ToggleActorSetup {
+    "save snapshots every 10 events" in new Setup {
       // prepare
       val actor = createActor()
 
@@ -276,33 +282,43 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       (1 to 9).foreach(_ => actor ? createActivation)
 
       // verify
-      waitFor(snapshotTimeout) { snapshotSequenceNr().isDefined }
+      waitFor(snapshotTimeout) {
+        snapshotSequenceNr().isDefined
+      }
       snapshotSequenceNr(10) mustBe Some(10)
     }
 
-    "deletes old snapshots when creating new ones" in new ToggleActorSetup {
+    "deletes old snapshots when creating new ones" in new Setup {
       // prepare
       val actor = createActor()
 
       // execute
       actor ? create
       (1 to 9).foreach(_ => actor ? createActivation)
-      waitFor(snapshotTimeout) { snapshotSequenceNr().isDefined }
+      waitFor(snapshotTimeout) {
+        snapshotSequenceNr().isDefined
+      }
       (1 to 10).foreach(_ => actor ? createActivation)
 
       // verify
-      waitFor(snapshotTimeout) { snapshotSequenceNr(20).isDefined }
-      waitFor(snapshotTimeout) { snapshotSequenceNr(10).isEmpty }
+      waitFor(snapshotTimeout) {
+        snapshotSequenceNr(20).isDefined
+      }
+      waitFor(snapshotTimeout) {
+        snapshotSequenceNr(10).isEmpty
+      }
       snapshotSequenceNr(10) mustBe None
       snapshotSequenceNr(20) mustBe Some(20)
     }
 
-    "recover from snapshot" in new ToggleActorSetup {
+    "recover from snapshot" in new Setup {
       // prepare
       val actor = createActor()
       actor ? create
       (1 to 9).foreach(_ => actor ? createActivation)
-      waitFor(30.seconds) { snapshotSequenceNr().isDefined }
+      waitFor(30.seconds) {
+        snapshotSequenceNr().isDefined
+      }
 
       // execute
       val newActor = createActor()
@@ -313,12 +329,14 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       primaryRollout(newToggle) mustBe createActivation.command.percentage
     }
 
-    "reject create toggle after recovering existing toggle from snapshot" in new ToggleActorSetup {
+    "reject create toggle after recovering existing toggle from snapshot" in new Setup {
       // prepare
       val actor = createActor()
       actor ? create
       (1 to 9).foreach(_ => actor ? createActivation)
-      waitFor(snapshotTimeout) { snapshotSequenceNr().isDefined }
+      waitFor(snapshotTimeout) {
+        snapshotSequenceNr().isDefined
+      }
       val newActor = createActor()
 
       // execute
@@ -328,13 +346,15 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       response mustBe ToggleAlreadyExists(toggleId)
     }
 
-    "recover deleted toggles from snapshot" in new ToggleActorSetup {
+    "recover deleted toggles from snapshot" in new Setup {
       // prepare
       val actor = createActor()
       actor ? create
       (1 to 8).foreach(_ => actor ? createActivation)
       actor ? delete
-      waitFor(snapshotTimeout) { snapshotSequenceNr().isDefined }
+      waitFor(snapshotTimeout) {
+        snapshotSequenceNr().isDefined
+      }
 
       // execute
       val newActor = createActor()
@@ -343,13 +363,15 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       await(newActor ? GetToggle) mustBe None
     }
 
-    "allow create toggle after recovering existing toggle from snapshot" in new ToggleActorSetup {
+    "allow create toggle after recovering existing toggle from snapshot" in new Setup {
       // prepare
       val actor = createActor()
       actor ? create
       (1 to 8).foreach(_ => actor ? createActivation)
       actor ? delete
-      waitFor(snapshotTimeout) { snapshotSequenceNr().isDefined }
+      waitFor(snapshotTimeout) {
+        snapshotSequenceNr().isDefined
+      }
       val newActor = createActor()
 
       // execute
@@ -359,19 +381,56 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       response mustBe CreateSucceeded(toggleId)
     }
 
-    "recover inactive toggles from snapshot" in new ToggleActorSetup {
+    "recover inactive toggles from snapshot" in new Setup {
       // prepare
       val actor = createActor()
       actor ? create
       (1 to 8).foreach(_ => actor ? createActivation)
       actor ? deleteActivation
-      waitFor(snapshotTimeout) { snapshotSequenceNr().isDefined }
+      waitFor(snapshotTimeout) {
+        snapshotSequenceNr().isDefined
+      }
 
       // execute
       val newActor = createActor()
 
       // verify
       fetchToggle(newActor).activations mustBe empty
+    }
+
+    "recover snapshots with rolloutPercentage" in new Setup {
+      // prepare
+      val actor = createTestActor()
+      val percentage = 10
+      val snapshot = ExistingToggleSnapshot(name = "toggle", rolloutPercentage = Some(percentage))
+      val expectedActivations = IndexedSeq(ToggleActivation(rollout = Some(Rollout(percentage))))
+      val expectedToggle = Toggle(toggleId, "toggle", "", activations = expectedActivations)
+
+      // execute
+      actor.receiveRecover(SnapshotOffer(snapshotMetadata, snapshot))
+
+      // verify
+      actor.maybeToggle mustBe Some(expectedToggle)
+    }
+
+    "respond to save snapshot failures" in new Setup {
+      // prepare
+      val actor = createTestActor()
+
+      // execute
+      actor.receive(SaveSnapshotFailure(snapshotMetadata, new RuntimeException("test exception")))
+
+      // verify: no MatchError
+    }
+
+    "respond to delete snapshot failures" in new Setup {
+      // prepare
+      val actor = createTestActor()
+
+      // execute
+      actor.receive(DeleteSnapshotFailure(snapshotMetadata, new RuntimeException("test exception")))
+
+      // verify: no MatchError
     }
   }
 }
