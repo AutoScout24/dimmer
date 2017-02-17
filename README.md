@@ -21,7 +21,8 @@ The toggle guru (Japanese for toggle).
   - [Creating a Toggle](#creating-a-toggle)
   - [Deleting a Toggle](#deleting-a-toggle)
   - [Getting Toggle Data](#getting-toggle-data)
-  - [Change Toggle Rollout Percentage](#change-toggle-rollout-percentage)
+  - [Create Toggle Activation](#create-toggle-activation)
+  - [Update Toggle Activation](#update-toggle-activation)
   - [Disabling a Toggle](#disabling-a-toggle)
 - [Configuration](#configuration)
   - [Togglestate Endpoint Initialization](#togglestate-endpoint-initialization)
@@ -56,7 +57,7 @@ curl -H "Authorization: api-key ???" https://your-endpoint.example.com/auditlog
 ```
 
 In the service configuration, `auth.api-keys` must contain an array of objects with fields
-`name` and `hash`. The hash must be created with BCrypt, see e.g. 
+`name` and `hash`. The hash must be created with BCrypt, see e.g.
 [the test configuration](conf/test.conf).
 
 ### Error Handling
@@ -159,7 +160,11 @@ Response format:
 { "id": "toguru-demo-toggle",
   "name": "Toguru demo toggle",
   "description": "Toguru demo toggle",
-  "tags": { "team": "Toguru team"} }
+  "tags": { "team": "Toguru team" },
+  "activations": [
+    { "attributes": { "hair": [ "black", "white" ] },
+      "rollout": 20 }
+  ] }
 ```
 
 curl example:
@@ -167,14 +172,45 @@ curl example:
 curl https://your-endpoint.example.com/toggle/toguru-demo-toggle
 ```
 
-### Change Toggle Rollout Percentage
+### Create Toggle Activation
 
-Http method and route: `PUT /toggle/:id/globalrollout`
+To activate a toggle, you need to create a toggle activation that defines
+the rollout percentage and additional attribute-based constraints that
+the ClientInfo must have in order for the toggle to switched on.
+
+Http method and route: `POST /toggle/:id/activations`
 
 Payload format:
 ```
-{ "percentage": 20 }
+{ "rollout": { "percentage": 20 },
+  "attributes": { "culture": [ "de-DE", "DE"] , ... } }
 ```
+
+Rollout and attributes are both optional, fields in attributes can be defined
+as needed, values of attribute fields can be strings or array of strings.
+
+Response format:
+```
+{ "status": "Ok", "index": 0 }
+```
+
+curl example:
+```
+curl -XPOST https://your-endpoint.example.com/toggle/toguru-demo-toggle/activations \
+  -d '{ "rollout": { "percentage": 20 }, "attributes": { "culture": "de-DE" } }'
+```
+
+### Update Toggle Activation
+
+Http method and route: `PUT /toggle/:id/activations/0`
+
+Payload format:
+```
+{ "rollout": { "percentage": 20 }, "attributes": { "hair": "black" } }
+```
+
+Rollout and attributes are both optional, fields in attributes can be defined
+as needed, values of attribute fields can be strings or array of strings.
 
 Response format:
 ```
@@ -183,13 +219,15 @@ Response format:
 
 curl example:
 ```
-curl -XPUT https://your-endpoint.example.com/toggle/toguru-demo-toggle/globalrollout \
-  -d '{"percentage":20}'
+curl -XPUT https://your-endpoint.example.com/toggle/toguru-demo-toggle/activations/0 \
+  -d '{ "rollout": { "percentage": 20 }, "attributes": { "hair": ["black", "white"] } }'
 ```
 
 ### Disabling a Toggle
 
-Http method and route: `DELETE /toggle/:id/globalrollout`
+Disabling a toggle is done by deleting its activation.
+
+Http method and route: `DELETE /toggle/:id/activations/0`
 
 Payload format: no payload required
 
@@ -200,19 +238,19 @@ Response format:
 
 curl example:
 ```
-curl -XDELETE https://your-endpoint.example.com/toggle/toguru-demo-toggle/globalrollout
+curl -XDELETE https://your-endpoint.example.com/toggle/toguru-demo-toggle/activations/0
 ```
 
 ## Configuration
 
-### Togglestate Endpoint Initialization 
+### Togglestate Endpoint Initialization
 
 When starting a toguru server, the toggle state endpoint will initially return
 an outdated toggle state. This is because the ToggleState actor needs to
 replay all toggle state changes before it is serving the recent toggle state.
 
 In order to prevent serving this stale state, the configuration setting
-`toggleState.initializeOnStartup` is set to `true` by default. This setting 
+`toggleState.initializeOnStartup` is set to `true` by default. This setting
 also causes the health check to fail until the toggle state endpoint is fully
 initialized.
 
