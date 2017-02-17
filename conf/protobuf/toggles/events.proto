@@ -1,13 +1,8 @@
 syntax = "proto3";
 
 import "scalapb/scalapb.proto";
-import "google/protobuf/wrappers.proto";
 
 package toguru.toggles;
-
-option (scalapb.options) = {
-  primitive_wrappers: true
-};
 
 message Metadata {
     int64  time = 1;
