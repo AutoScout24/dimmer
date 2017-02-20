@@ -31,11 +31,13 @@ object ToggleActor {
 
   case object AuthenticationMissing
 
-  case class CreateActivationCommand(percentage: Option[Rollout], attributes: Map[String, Seq[String]] = Map.empty)
+  type Attributes = Map[String, Seq[String]]
+
+  case class CreateActivationCommand(rollout: Option[Rollout], attributes: Attributes = Map.empty)
 
   case class CreateActivationSuccess(index: Int)
 
-  case class UpdateActivationCommand(index: Int, percentage: Option[Rollout], attributes: Map[String, Seq[String]] = Map.empty)
+  case class UpdateActivationCommand(index: Int, rollout: Option[Rollout], attributes: Attributes = Map.empty)
 
   case class DeleteActivationCommand(index: Int)
 

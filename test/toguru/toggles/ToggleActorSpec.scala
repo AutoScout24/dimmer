@@ -34,12 +34,12 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
     val toggle = Toggle(toggleId, "name","description")
     val createCmd = CreateToggleCommand(toggle.name, toggle.description, toggle.tags)
     val updateCmd = UpdateToggleCommand(None, Some("new description"), Some(Map("services" -> "toguru")))
-    val createActivationCmd = CreateActivationCommand(percentage = Some(Rollout(42)))
+    val createActivationCmd = CreateActivationCommand(rollout = Some(Rollout(42)))
     val create = authenticated(createCmd)
     val update = authenticated(updateCmd)
     val delete = authenticated(DeleteToggleCommand)
     val createActivation = authenticated(createActivationCmd)
-    val updateActivationCmd = UpdateActivationCommand(0, percentage = Some(Rollout(55)), Map("a" -> Seq("b")))
+    val updateActivationCmd = UpdateActivationCommand(0, rollout = Some(Rollout(55)), Map("a" -> Seq("b")))
     val updateActivation = authenticated(updateActivationCmd)
     val deleteActivation = authenticated(DeleteActivationCommand(0))
 
@@ -183,12 +183,12 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       // verify
       response mustBe CreateActivationSuccess(0)
       val actorToggle = await(actor ? GetToggle).asInstanceOf[Some[Toggle]].get
-      actorToggle.activations(0).rollout mustBe createActivationCmd.percentage
+      actorToggle.activations(0).rollout mustBe createActivationCmd.rollout
     }
 
     "update activation condition when receiving command" in new Setup {
       // prepare
-      val actor = createActor(Some(toggle.copy(rolloutPercentage = Some(55))))
+      val actor = createActor(Some(toggle.copy(activations = IndexedSeq(ToggleActivation(rollout = Some(Rollout(55)))))))
 
       // execute
       val response = await(actor ? updateActivation)
@@ -197,7 +197,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       response mustBe Success
       val fToggle = fetchToggle(actor)
       fToggle.activations must have length (1)
-      primaryRollout(fToggle) mustBe updateActivation.command.percentage
+      primaryRollout(fToggle) mustBe updateActivation.command.rollout
     }
 
     "reject set global rollout condition command when toggle does not exists" in new Setup {
@@ -213,7 +213,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
 
     "delete activation when receiving command" in new Setup {
       // prepare
-      val actor = createActor(Some(toggle.copy(rolloutPercentage = Some(42))))
+      val actor = createActor(Some(toggle.copy(activations = IndexedSeq(ToggleActivation(rollout = Some(Rollout(42)))))))
 
       // execute
       val response = await(actor ? deleteActivation)
@@ -244,7 +244,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       // verify
       response mustBe CreateActivationSuccess(0)
       val activation = fetchToggle(actor).activations(0)
-      activation mustBe ToggleActivation(createActivationCmd.attributes, createActivationCmd.percentage)
+      activation mustBe ToggleActivation(createActivationCmd.attributes, createActivationCmd.rollout)
     }
 
     "persist toggle events" in new Setup {
@@ -268,8 +268,8 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       val meta = Some(Metadata(0, testUser))
 
       events(0) mustBe ToggleCreated(toggle.name, toggle.description, toggle.tags, meta)
-      events(1) mustBe ActivationCreated(meta, 0, rollout = createActivationCmd.percentage)
-      events(2) mustBe ActivationUpdated(meta, 0, toProtoBuf(updateActivationCmd.attributes), updateActivationCmd.percentage)
+      events(1) mustBe ActivationCreated(meta, 0, rollout = createActivationCmd.rollout)
+      events(2) mustBe ActivationUpdated(meta, 0, toProtoBuf(updateActivationCmd.attributes), updateActivationCmd.rollout)
       events(3) mustBe ActivationDeleted(meta, 0)
     }
 
@@ -326,7 +326,7 @@ class ToggleActorSpec extends ActorSpec with WaitFor {
       // verify
       val newToggle = fetchToggle(newActor)
       newToggle.name mustBe toggle.name
-      primaryRollout(newToggle) mustBe createActivation.command.percentage
+      primaryRollout(newToggle) mustBe createActivation.command.rollout
     }
 
     "reject create toggle after recovering existing toggle from snapshot" in new Setup {

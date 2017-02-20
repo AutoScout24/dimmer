@@ -21,11 +21,15 @@ object ToggleStateController {
   val MimeApiV2 = "application/vnd.toguru.v2+json"
   val MimeApiV3 = "application/vnd.toguru.v3+json"
 
-  val toggleStateWriterUntilV2: Writes[ToggleState] = (
+  val toggleStateWriterUntilV2: Writes[ToggleState] = {
+    def activeRolloutPercentage(state: ToggleState): Option[Int] = state.activations.headOption.flatMap(_.rollout.map(_.percentage))
+
+    (
       (JsPath \ "id").write[String] and
       (JsPath \ "tags").write[Map[String, String]] and
       (JsPath \ "rolloutPercentage").writeNullable[Int]
-    )(ts => (ts.id, ts.tags, ts.activations.headOption.flatMap(_.rollout.map(_.percentage)) ))
+    )(ts => (ts.id, ts.tags, activeRolloutPercentage(ts)))
+  }
 
   val toggleStateSeqWriterUntilV2 = Writes.seq(toggleStateWriterUntilV2)
 

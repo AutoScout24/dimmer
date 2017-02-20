@@ -235,7 +235,7 @@ class ToggleControllerSpec extends ControllerSpec {
 
       status(result) mustBe 200
       contentAsJson(result) mustBe okResponseBody
-      command.value.percentage mustBe Some(Rollout(50))
+      command.value.rollout mustBe Some(Rollout(50))
     }
 
     "deny access when no api key given" in new Setup {

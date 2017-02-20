@@ -102,7 +102,13 @@ Response format:
 [
   { "id": "toguru-demo-toggle",
     "tags": { "team": "Toguru team" },
-    "rolloutPercentage":20
+    "activations": [
+      { "rollout": { "percentage": 20 },
+        "attributes": {
+          "hair": [ "black", "white" ]
+        }
+      }
+    ]
   }
 ]
 ```
@@ -163,7 +169,7 @@ Response format:
   "tags": { "team": "Toguru team" },
   "activations": [
     { "attributes": { "hair": [ "black", "white" ] },
-      "rollout": 20 }
+      "rollout": { "percentage": 20 }
   ] }
 ```
 
