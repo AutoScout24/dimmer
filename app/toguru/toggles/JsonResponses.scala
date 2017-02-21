@@ -8,9 +8,7 @@ import play.api.mvc._
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
-object JsonResponses extends JsonResponses  {
-
-}
+object JsonResponses extends JsonResponses
 
 trait JsonResponses extends ResultPublishing {
 

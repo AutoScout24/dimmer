@@ -61,28 +61,7 @@ class ToggleStateControllerSpec extends ControllerSpec {
     Props(new Actor() { override def receive = { case GetState => sender ! ToggleStates(10, toggles.values.to[Vector].sortBy(_.id))}})
 
   "get method" should {
-    "return list of toggle states fetched from actor" in {
-      // prepare
-      implicit val reads = Json.reads[ToggleStateV2]
-
-      val controller: ToggleStateController = createController(toggleStateActorProps(toggles))
-
-      val request = FakeRequest()
-
-      // execute
-      val result = controller.get(None).apply(request)
-
-      // verify
-      status(result) mustBe 200
-
-      val state = contentAsJson(result).as[Seq[ToggleStateV2]]
-
-      val expectedToggles = (1 to 3).map(i => stateV2(toggles(s"toggle-$i")))
-
-      state mustBe expectedToggles
-    }
-
-    "return version specific format V3" in {
+    "return current toggle state" in {
       // prepare
       implicit val rolloutReads = Json.reads[Rollout]
       implicit val activationReads = Json.reads[ToggleActivation]
@@ -128,6 +107,50 @@ class ToggleStateControllerSpec extends ControllerSpec {
         ToggleStateV2("toggle-2"),
         ToggleStateV2("toggle-3", rolloutPercentage = Some(25))
       )
+    }
+
+    "return format V1 if requested" in {
+      // prepare
+      implicit val reads = Json.reads[ToggleStateV2]
+
+      val controller: ToggleStateController = createController(toggleStateActorProps(toggles))
+
+      val request = FakeRequest()
+
+      // execute
+      val result = controller.get(None).apply(request)
+
+      // verify
+      status(result) mustBe 200
+
+      val state = contentAsJson(result).as[Seq[ToggleStateV2]]
+
+      val expectedToggles = (1 to 3).map(i => stateV2(toggles(s"toggle-$i")))
+
+      state mustBe expectedToggles
+    }
+
+
+    "reject unknown toggle format requests" in {
+      val MimeApiV4 = "application/vnd.toguru.v4+json"
+
+      val controller: ToggleStateController = createController(toggleStateActorProps(toggles))
+
+      val request = FakeRequest().withAccept(MimeApiV4)
+
+      // execute
+      val result = controller.get(None).apply(request)
+
+      // verify
+      status(result) mustBe 406
+
+      val responseBody = contentAsJson(result)
+
+      val maybeAllowedContentTypes = (responseBody \ "allowedContentTypes").asOpt[Seq[String]]
+
+      maybeAllowedContentTypes mustBe defined
+
+      maybeAllowedContentTypes.value mustNot be (empty)
     }
 
     "return Internal Server Error if seqNo is newer than server seqNo" in {

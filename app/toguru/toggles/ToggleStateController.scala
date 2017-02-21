@@ -7,9 +7,11 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.codahale.metrics.Counter
 import com.kenshoo.play.metrics.Metrics
+import play.api.http.MimeTypes
 import play.api.libs.json.{JsPath, Json, Writes}
 import play.api.libs.functional.syntax._
 import play.api.mvc._
+import play.mvc.Http.HeaderNames
 import toguru.app.Config
 import toguru.logging.EventPublishing
 import toguru.toggles.ToggleStateActor.{GetState, ToggleStateInitializing}
@@ -20,6 +22,7 @@ import toguru.toggles.events.Rollout
 object ToggleStateController {
   val MimeApiV2 = "application/vnd.toguru.v2+json"
   val MimeApiV3 = "application/vnd.toguru.v3+json"
+  val AllowedContentTypes = Seq(MimeTypes.JSON, MimeApiV2, MimeApiV3)
 
   val toggleStateWriterUntilV2: Writes[ToggleState] = {
     def activeRolloutPercentage(state: ToggleState): Option[Int] = state.activations.headOption.flatMap(_.rollout.map(_.percentage))
@@ -82,5 +85,14 @@ class ToggleStateController(actor: ActorRef, config: Config, stateRequests: Coun
     case Accepts.Json()    => Ok(Json.toJson(toggleStates.toggles)(toggleStateSeqWriterUntilV2))
     case AcceptsToguruV2() => Ok(Json.toJson(toggleStates)(toggleStatesWriterUntilV2)).as(MimeApiV2)
     case AcceptsToguruV3() => Ok(Json.toJson(toggleStates)).as(MimeApiV3)
+    case _ =>
+      val requestedContentType = request.headers.get(HeaderNames.CONTENT_TYPE).mkString
+      NotAcceptable(
+        errorJson(
+          "Not Acceptable",
+          s"The requested content type '$requestedContentType' cannot be served",
+          s"Please choose one of the following content types: ${AllowedContentTypes.mkString(", ")}") ++
+        Json.obj("allowedContentTypes" -> AllowedContentTypes)
+      )
   }
 }
