@@ -67,6 +67,10 @@ class ToggleStateController(actor: ActorRef, config: Config, stateRequests: Coun
     stateRequests.inc()
 
     (actor ? GetState).map {
+      case ToggleStateInitializing =>
+        InternalServerError(errorJson("Internal Server Error",
+          "Server is currently initializing",
+          "Please wait until this server has completed initialization"))
       case ts: ToggleStates if seqNo.exists(_ > ts.sequenceNo) =>
         stateStaleErrors.inc()
         InternalServerError(errorJson("Internal Server Error",
@@ -74,10 +78,6 @@ class ToggleStateController(actor: ActorRef, config: Config, stateRequests: Coun
           "Wait until server replays state or query another server"))
       case ts: ToggleStates =>
         responseFor(request, ts)
-      case ToggleStateInitializing =>
-        InternalServerError(errorJson("Internal Server Error",
-        "Server is currently initializing",
-        "Please wait until server has completed initialization"))
     }.recover(serverError("get-toggle-state"))
   }
 

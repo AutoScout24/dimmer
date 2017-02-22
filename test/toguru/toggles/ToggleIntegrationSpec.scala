@@ -5,7 +5,7 @@ import akka.pattern.ask
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.{OneServerPerSuite, PlaySpec}
 import play.api.inject.{BindingKey, QualifierInstance}
-import play.api.libs.json.{JsArray, JsObject, Json}
+import play.api.libs.json._
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 import play.api.mvc.Results
 import play.api.test.Helpers._
@@ -212,7 +212,11 @@ class ToggleIntegrationSpec extends PlaySpec
 
       val json = Json.parse(response.body)
       json mustBe a[JsObject]
-      (json \ "toggles").get.asInstanceOf[JsArray].value must have size 2
+      json \ "toggles" match {
+        case JsDefined(JsArray(seq)) => seq must have size 2
+        case JsDefined(jsValue) => fail(s"'toggles' field is not an array, but $jsValue")
+        case _ => fail(s"toggles field is not defined")
+      }
     }
 
     "allow to update toggle" in {
