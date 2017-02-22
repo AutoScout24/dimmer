@@ -11,7 +11,6 @@ trait WaitFor {
 
   def waitFor(timeout: FiniteDuration, checkEvery: FiniteDuration = 100.millis)(test: => Boolean): Unit = {
     val deadline = System.currentTimeMillis() + timeout.toMillis
-    var success = false
 
     @tailrec
     def tryTest(): Boolean =
