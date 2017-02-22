@@ -10,7 +10,7 @@ import toguru.toggles.{AuditLog, Authentication, ToggleState}
 import toguru.toggles.Authentication.ApiKey
 
 import scala.concurrent.duration._
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 
 trait Config {
@@ -50,11 +50,10 @@ class Configuration @Inject() (playConfig: play.api.Configuration) extends Confi
     def parseApiKeys(list: ConfigList): List[ApiKey] = list.flatMap {
       case value : ConfigObject =>
         val config = value.toConfig
-        try {
-          Some(ApiKey(config.getString("name"), config.getString("hash")))
-        } catch {
-          case NonFatal(e) =>
-            Logger.warn("Parsing api key failed", e)
+        Try(ApiKey(config.getString("name"), config.getString("hash"))) match {
+          case Success(key) => Some(key)
+          case Failure(ex) =>
+            Logger.warn("Parsing api key failed", ex)
             None
         }
     }.toList

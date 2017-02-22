@@ -8,7 +8,7 @@ import com.typesafe.config.Config
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.sys.process._
-import scala.util.Random
+import scala.util.{Random, Try}
 
 trait PostgresSetup {
 
@@ -19,7 +19,7 @@ trait PostgresSetup {
     import scala.concurrent.ExecutionContext.Implicits.global
 
     def waitForConnection(): Unit = {
-      try {
+      Try {
         val url = config.getString("slick.db.url")
         val conn = DriverManager.getConnection(url)
         try {
@@ -31,7 +31,7 @@ trait PostgresSetup {
         } finally {
           conn.close()
         }
-      } catch {
+      } recover {
         case _ : IOException  =>
           Thread.sleep(500)
           waitForConnection()
