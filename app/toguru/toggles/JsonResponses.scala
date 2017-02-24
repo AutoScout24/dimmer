@@ -78,5 +78,5 @@ trait JsonResponses extends ResultPublishing {
     }
   }
 
-  val ActionWithJson = Action andThen OnlyJson
+  val ActionWithJson: ActionBuilder[Request] = Action andThen OnlyJson
 }

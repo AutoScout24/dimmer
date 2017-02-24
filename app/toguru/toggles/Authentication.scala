@@ -7,6 +7,13 @@ import play.mvc.Http.HeaderNames.AUTHORIZATION
 import com.github.t3hnar.bcrypt._
 
 import scala.concurrent.Future
+import scala.language.higherKinds
+
+trait Authentication {
+  import Authentication.{ Config, Refiner }
+
+  def Authenticate[R[T] <: Request[T]](config: Config): Refiner[R] = Authentication.authenticateRefiner(config)
+}
 
 object Authentication {
   val ApiKeyPrefix = "api-key"
@@ -26,20 +33,15 @@ object Authentication {
 
   class AuthenticatedRequest[A](val principal: Principal, request: Request[A]) extends WrappedRequest(request)
 
-  import scala.language.higherKinds
-
   type Refiner[R[_]] = ActionRefiner[R, AuthenticatedRequest]
 
-  object Authenticate {
+  def authenticateRefiner[R[T] <: Request[T]](config: Config): Refiner[R] = new Refiner[R] {
 
-    def apply[T, R[T] <: Request[T]](config: Config): Refiner[R] = new Refiner[R] {
-
-      override protected def refine[A](r: R[A]): Future[Either[Result, AuthenticatedRequest[A]]] =
-        extractPrincipal(config, r) match {
-          case Some(p) => Future.successful(Right(new AuthenticatedRequest(p, r)))
-          case None    => Future.successful(Left(UnauthorizedResponse))
-        }
-    }
+    override protected def refine[A](request: R[A]): Future[Either[Result, AuthenticatedRequest[A]]] =
+      extractPrincipal(config, request) match {
+        case Some(p) => Future.successful(Right(new AuthenticatedRequest(p, request)))
+        case None    => Future.successful(Left(UnauthorizedResponse))
+      }
   }
 
   def extractPrincipal[A](config: Config, request: Request[A]): Option[Principal] = {
@@ -65,10 +67,4 @@ object Authentication {
       "message" -> s"$AUTHORIZATION header missing or invalid",
       "remedy"  -> s"Provide a valid $AUTHORIZATION header '$AUTHORIZATION: $ApiKeyPrefix [your-api-key]' in your request"
     ))
-}
-
-trait Authentication {
-
-  val Authenticate = Authentication.Authenticate
-
 }

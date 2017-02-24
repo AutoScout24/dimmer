@@ -18,7 +18,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class ToggleController(config: Config, provider: ToggleActorProvider) extends Controller with EventPublishing with Authentication with Results with JsonResponses with ToggleActorResponses {
   import ToggleControllerJsonCommands._
 
-  val AuthenticatedWithJson: ActionBuilder[AuthenticatedRequest] = ActionWithJson andThen Authenticate(config.auth)
+  val AuthenticatedWithJson: ActionBuilder[AuthenticatedRequest] = ActionWithJson andThen Authenticate[Request](config.auth)
 
   def authenticated[T](command: T)(implicit request: AuthenticatedRequest[_]) =
     AuthenticatedCommand(command, request.principal)
