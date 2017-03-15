@@ -265,6 +265,7 @@ To switch both behaviours off, set `toggleState.initializeOnStartup` to `false`.
 ## Related projects
 
 * [AutoScout24/toguru-scala-client](https://github.com/AutoScout24/toguru-scala-client): Scala client for this toggling service
+* [AutoScout24/toguru-panel](https://github.com/AutoScout24/toguru-panel): UI panel for toggle management
 
 ## License
 
