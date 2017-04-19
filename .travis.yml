@@ -23,6 +23,8 @@ env:
   - TOGURU_VERSION=$TRAVIS_BUILD_NUMBER
 
 script:
+  - echo "$TRAVIS_BRANCH"
+  - echo "$TRAVIS_REPO_SLUG"
   - docker version
   - docker info
   - ./activator coverage test it:test coverageReport coverageOff docker:publishLocal
