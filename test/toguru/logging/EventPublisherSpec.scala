@@ -34,7 +34,7 @@ class EventPublisherSpec extends WordSpec with Matchers {
       def markers: LogstashMarker =
         Markers.appendEntries(Map("toggleId" -> "someToggle", "exception_type" -> "java.sql.BatchUpdateException", "@name" -> "testEvent").asJava)
 
-      verify(MockEventPublisher.eventLogger).error(markers, "BatchFailed\n\tSQL Exception 1\n\tSQL Exception 2\n\tSQL Exception 3", exception)
+      verify(MockEventPublisher.eventLogger).error(markers, "BatchFailed, SQL Exception 1, SQL Exception 2, SQL Exception 3", exception)
     }
 
     "not fail if no messages are contained in chained exception" in {

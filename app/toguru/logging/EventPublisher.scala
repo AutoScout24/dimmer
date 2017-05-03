@@ -26,20 +26,17 @@ trait Events {
 
   def event(name: String, exception: Throwable, fields: (String, Any)*): Unit = {
     val eventMarkers = markers(name, fields :+ ("exception_type" -> exception.getClass.getName))
-    exception match {
-      case e: BatchUpdateException => eventLogger.error(eventMarkers, nestedExceptionAsString(e), exception)
-      case _ => eventLogger.error(eventMarkers, exception.getMessage, exception)
+    val message = exception match {
+      case e: SQLException => nestedExceptionAsString(e).mkString(", ")
+      case _ => exception.getMessage
     }
+    eventLogger.error(eventMarkers, message, exception)
   }
 
   def event(e: Event): Unit = event(e.eventName, e.eventFields: _*)
 
-  def nestedExceptionAsString(exception: SQLException): String = {
-      var message = ""
-      if (exception.getNextException != null) message = nestedExceptionAsString(exception.getNextException)
-      if (message == "") exception.getMessage
-      else exception.getMessage + "\n\t" + message
-    }
+  def nestedExceptionAsString(exception: SQLException): Seq[String] =
+      exception.asScala.map(_.getMessage).toSeq
 
   private def markers(name: String, fields: Seq[(String, Any)]): LogstashMarker =
     appendEntries(Map(fields: _*).updated("@name", name).asJava)
