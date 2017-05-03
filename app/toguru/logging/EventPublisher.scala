@@ -25,17 +25,18 @@ trait Events {
   def event(name: String, fields: (String, Any)*): Unit = eventLogger.info(markers(name, fields), "")
 
   def event(name: String, exception: Throwable, fields: (String, Any)*): Unit = {
-    val eventMarkers = markers(name, fields :+ ("exception_type" -> exception.getClass.getName))
-    val message = exception match {
-      case e: SQLException => nestedExceptionAsString(e).mkString(", ")
-      case _ => exception.getMessage
+    val exceptionTypeField  = Seq(("exception_type" -> exception.getClass.getName))
+    val eventMarkerFields = exception match {
+      case e: SQLException => exceptionTypeField :+ ("nested_exceptions" -> nestedExceptionAsSeq(e).drop(1))
+      case _ => exceptionTypeField
     }
-    eventLogger.error(eventMarkers, message, exception)
+    val eventMarkers = markers(name, fields ++ eventMarkerFields)
+    eventLogger.error(eventMarkers, exception.getMessage, exception)
   }
 
   def event(e: Event): Unit = event(e.eventName, e.eventFields: _*)
 
-  def nestedExceptionAsString(exception: SQLException): Seq[String] =
+  def nestedExceptionAsSeq(exception: SQLException): Seq[String] =
       exception.asScala.map(_.getMessage).toSeq
 
   private def markers(name: String, fields: Seq[(String, Any)]): LogstashMarker =

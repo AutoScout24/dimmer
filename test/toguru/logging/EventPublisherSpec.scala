@@ -31,10 +31,14 @@ class EventPublisherSpec extends WordSpec with Matchers {
 
       MockEventPublisher.event("testEvent", exception, "toggleId" -> "someToggle")
 
-      def markers: LogstashMarker =
-        Markers.appendEntries(Map("toggleId" -> "someToggle", "exception_type" -> "java.sql.BatchUpdateException", "@name" -> "testEvent").asJava)
+      val markers: LogstashMarker =
+        Markers.appendEntries(
+          Map("toggleId"          -> "someToggle",
+              "exception_type"    -> "java.sql.BatchUpdateException",
+              "@name"             -> "testEvent",
+              "nested_exceptions" -> List("SQL Exception 1", "SQL Exception 2", "SQL Exception 3")).asJava)
 
-      verify(MockEventPublisher.eventLogger).error(markers, "BatchFailed, SQL Exception 1, SQL Exception 2, SQL Exception 3", exception)
+      verify(MockEventPublisher.eventLogger).error(markers, "BatchFailed", exception)
     }
 
     "not fail if no messages are contained in chained exception" in {
@@ -43,7 +47,11 @@ class EventPublisherSpec extends WordSpec with Matchers {
       MockEventPublisher.event("testEvent", exception, "toggleId" -> "someToggle")
 
       def markers: LogstashMarker =
-        Markers.appendEntries(Map("toggleId" -> "someToggle", "exception_type" -> "java.sql.BatchUpdateException", "@name" -> "testEvent").asJava)
+        Markers.appendEntries(
+          Map("toggleId"          -> "someToggle",
+              "exception_type"    -> "java.sql.BatchUpdateException",
+              "@name"             -> "testEvent",
+              "nested_exceptions" -> List()).asJava)
 
       verify(MockEventPublisher.eventLogger).error(markers, "BatchFailed", exception)
     }
