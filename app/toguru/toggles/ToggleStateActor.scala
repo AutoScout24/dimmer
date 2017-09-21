@@ -115,14 +115,19 @@ class ToggleStateActor(
       case ToggleUpdated(_, _, tags, _)  => updateToggle(id, _.copy(tags = tags))
       case ToggleDeleted(_)              => toggles = toggles - id
       case ActivationCreated(_, _, attrs, r) =>
-        updateToggle(id, _.copy(activations = IndexedSeq(ToggleActivation(fromProtoBuf(attrs), r))))
+        updateToggle(id, _.copy(activations = filterRollouts(attrs, r)))
       case ActivationUpdated(_, _, attrs, r) =>
-        updateToggle(id, _.copy(activations = IndexedSeq(ToggleActivation(fromProtoBuf(attrs), r))))
+        updateToggle(id, _.copy(activations = filterRollouts(attrs, r)))
       case ActivationDeleted(_, _)       => updateToggle(id, _.copy(activations = IndexedSeq.empty))
     }
     lastSequenceNo = offset
   }
 
+
   def updateToggle(id: String, update: ToggleState => ToggleState): Unit =
     toggles.get(id).map(update).foreach(t => toggles = toggles.updated(id, t))
+
+  private def filterRollouts(attrs: Map[String, StringSeq], r: Option[Rollout]) =
+    IndexedSeq(ToggleActivation(fromProtoBuf(attrs), r)).filterNot(_.rollout.map(_.percentage).getOrElse(0) == 0)
+
 }

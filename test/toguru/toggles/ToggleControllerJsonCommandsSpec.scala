@@ -3,6 +3,7 @@ package toguru.toggles
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.{JsError, Json}
 import toguru.toggles.ToggleControllerJsonCommands._
+import toguru.toggles.events.Rollout
 
 
 class ToggleControllerJsonCommandsSpec extends PlaySpec {
@@ -30,6 +31,14 @@ class ToggleControllerJsonCommandsSpec extends PlaySpec {
 
       // execute & verify
       invalidPercentage.validate[ActivationBody] mustBe a[JsError]
+    }
+
+    "accept rollout percentage of zero" in {
+      // prepare
+      val zeroPercentage = Json.obj("rollout" -> Json.obj("percentage" -> 0))
+
+      // execute & verify
+      zeroPercentage.as[ActivationBody] mustBe ActivationBody(Map.empty, Some(Rollout(0)))
     }
 
     "parse attributes with sequence value" in {

@@ -14,7 +14,7 @@ object ToggleControllerJsonCommands {
   }
 
   implicit val rolloutFormat: Format[Rollout] =
-    (JsPath \ "percentage").format[Int](min(1) keepAnd max(100))
+    (JsPath \ "percentage").format[Int](min(0) keepAnd max(100))
       .inmap(Rollout.apply, unlift(Rollout.unapply))
 
   implicit val activationFormat = Json.format[ToggleActivation]

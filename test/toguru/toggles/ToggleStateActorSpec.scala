@@ -62,6 +62,27 @@ class ToggleStateActorSpec extends ActorSpec with WaitFor {
       response mustBe ToggleStates(0, toggles.values.to[Seq])
     }
 
+    "filters out activations with rollout 0" in {
+      // prepare
+      val actor = createActor()
+      val id = "toggle-1"
+      val id2 = "toggle-2"
+
+      // execute
+      actor ! event(id, ToggleCreated("name", "description", Map.empty))
+      actor ! event(id, ActivationCreated(index = 0, rollout = rollout(10)))
+      actor ! event(id, ActivationUpdated(index = 0, rollout = rollout(0)))
+
+      actor ! event(id2, ToggleCreated("name", "description", Map.empty))
+      actor ! event(id2, ActivationCreated(index = 0, rollout = rollout(0)))
+
+      val response = await(actor ? GetState)
+      response mustBe ToggleStates(0, Seq(
+        ToggleState(id = id, activations = IndexedSeq.empty),
+        ToggleState(id = id2, activations = IndexedSeq.empty)
+      ))
+    }
+
     "returns correct sequence number" in {
       // prepare
       val actor = createActor()
