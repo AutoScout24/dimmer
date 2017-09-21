@@ -16,8 +16,6 @@ cache:
 
 before_install:
   - docker version
-  - sudo apt-get -o Dpkg::Options::="--force-confnew" --force-yes -y install docker-engine
-  - docker version
 
 env:
   - TOGURU_VERSION=$TRAVIS_BUILD_NUMBER
