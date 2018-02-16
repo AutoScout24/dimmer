@@ -5,7 +5,7 @@ object Version {
   val ScalaPb                 = "0.5.38"
   val Play                    = "2.5.10"
   val NativePackager          = "1.2.0-M5"
-  val AkkaPersistenceJdbc     = "2.6.12"
+  val AkkaPersistenceJdbc     = "2.8.0"
   val AkkaPersistenceInmemory = "1.3.7"
   val Postgres                = "9.4.1209"
   val LogstashEncoder         = "4.7"
