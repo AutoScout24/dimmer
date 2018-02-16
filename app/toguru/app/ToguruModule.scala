@@ -7,8 +7,8 @@ import akka.persistence.jdbc.query.scaladsl.JdbcReadJournal
 import akka.persistence.query.PersistenceQuery
 import com.google.inject.{AbstractModule, Provides}
 import play.api.libs.concurrent.AkkaGuiceSupport
-import slick.backend.DatabaseConfig
-import slick.driver.JdbcDriver
+import slick.basic.DatabaseConfig
+import slick.jdbc.JdbcProfile
 import toguru.toggles.{AuditLog, AuditLogActor, ToggleState, ToggleStateActor}
 
 class ToguruModule extends AbstractModule with AkkaGuiceSupport {
@@ -29,7 +29,7 @@ class ToguruModule extends AbstractModule with AkkaGuiceSupport {
   def toggleStateConfig(config: Config): ToggleState.Config = config.toggleState
 
   @Provides @Singleton
-  def dbConfig: DatabaseConfig[JdbcDriver] = DatabaseConfig.forConfig("slick")
+  def dbConfig: DatabaseConfig[JdbcProfile] = DatabaseConfig.forConfig("slick")
 
   @Provides @Singleton
   def readJournal(system: ActorSystem): JdbcReadJournal =

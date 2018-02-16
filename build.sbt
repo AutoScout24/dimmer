@@ -27,7 +27,8 @@ libraryDependencies ++= Seq(
   ScalaPbRuntime          % PB.protobufConfig,
   ScalaTestPlus           % Test,
   AkkaPersistenceInmemory % Test,
-  Mockito                 % Test
+  Mockito                 % Test,
+  AkkaTestKit             % Test
 )
 
 

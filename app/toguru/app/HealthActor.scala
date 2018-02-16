@@ -5,8 +5,8 @@ import javax.inject.{Inject, Named}
 import akka.actor.{Actor, ActorRef}
 import akka.pattern.ask
 import akka.util.Timeout
-import slick.backend.DatabaseConfig
-import slick.driver.JdbcDriver
+import slick.basic.DatabaseConfig
+import slick.jdbc.JdbcProfile
 import toguru.app.HealthActor.{CheckHealth, GetHealth, HealthStatus}
 import toguru.helpers.FutureTimeout
 import toguru.toggles.ToggleStateActor.GetState
@@ -26,7 +26,7 @@ object HealthActor {
 }
 
 
-class HealthActor @Inject() (dbConfig: DatabaseConfig[JdbcDriver], @Named("toggle-state") toggleState: ActorRef, config: Config) extends Actor with FutureTimeout {
+class HealthActor @Inject() (dbConfig: DatabaseConfig[JdbcProfile], @Named("toggle-state") toggleState: ActorRef, config: Config) extends Actor with FutureTimeout {
 
   var databaseHealthy: Boolean = false
 

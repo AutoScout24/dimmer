@@ -6,8 +6,8 @@ import akka.actor.{Actor, Cancellable, Scheduler}
 import ToggleStateActor._
 import akka.persistence.jdbc.query.scaladsl.JdbcReadJournal
 import akka.persistence.query.EventEnvelope
-import slick.backend.DatabaseConfig
-import slick.driver.JdbcDriver
+import slick.basic.DatabaseConfig
+import slick.jdbc.JdbcProfile
 import toguru.helpers.FutureTimeout.timeout
 import toguru.logging.EventPublishing
 import toguru.toggles.events._
@@ -37,7 +37,7 @@ object ToggleStateActor {
 
   type SequenceNoProvider = (Scheduler, ExecutionContext) => Future[Long]
 
-  def dbSequenceNoProvider(dbConfig: DatabaseConfig[JdbcDriver]): SequenceNoProvider = { (scheduler: Scheduler, executionContext: ExecutionContext) =>
+  def dbSequenceNoProvider(dbConfig: DatabaseConfig[JdbcProfile]): SequenceNoProvider = { (scheduler: Scheduler, executionContext: ExecutionContext) =>
     import dbConfig.driver.api._
 
     implicit val ec = executionContext
@@ -56,7 +56,7 @@ class ToggleStateActor(
   extends Actor with EventPublishing {
 
   @Inject()
-  def this(readJournal: JdbcReadJournal, dbConfig: DatabaseConfig[JdbcDriver], config: ToggleState.Config) =
+  def this(readJournal: JdbcReadJournal, dbConfig: DatabaseConfig[JdbcProfile], config: ToggleState.Config) =
     this(
       ToggleLog.sendToggleEvents(readJournal, Shutdown),
       dbSequenceNoProvider(dbConfig),

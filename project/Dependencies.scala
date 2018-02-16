@@ -5,7 +5,7 @@ object Version {
   val ScalaPb                 = "0.5.38"
   val Play                    = "2.5.10"
   val NativePackager          = "1.2.0-M5"
-  val AkkaPersistenceJdbc     = "2.6.12"
+  val AkkaPersistenceJdbc     = "2.8.0"
   val AkkaPersistenceInmemory = "1.3.7"
   val Postgres                = "9.4.1209"
   val LogstashEncoder         = "4.7"
@@ -14,6 +14,7 @@ object Version {
   val DropwizardMetrics       = "3.1.2"
   val ScalaBcrypt             = "3.0"
   val Mockito                 = "1.10.19"
+  val AkkaTestKit             = "2.4.20"
 
 }
 
@@ -29,5 +30,6 @@ object Library {
   val DropwizardMetrics       =  "io.dropwizard.metrics" %  "metrics-core"              % Version.DropwizardMetrics exclude("commons-logging", "commons-logging")
   val ScalaBcrypt             = "com.github.t3hnar"      %% "scala-bcrypt"              % Version.ScalaBcrypt
   val Mockito                 = "org.mockito"            %  "mockito-core"              % Version.Mockito
+  val AkkaTestKit             = "com.typesafe.akka"      %% "akka-testkit"              % Version.AkkaTestKit
 
 }
