@@ -1,7 +1,7 @@
 # Toguru - トグル
 
-[![Build Status](https://travis-ci.org/AutoScout24/toguru.svg?branch=master)](https://travis-ci.org/AutoScout24/toguru)
-[![Coverage Status](https://coveralls.io/repos/github/AutoScout24/toguru/badge.svg?branch=master)](https://coveralls.io/github/AutoScout24/toguru?branch=master)
+[![Build Status](https://travis-ci.org/Scout24/toguru.svg?branch=master)](https://travis-ci.org/AutoScout24/toguru)
+[![Coverage Status](https://coveralls.io/repos/github/Scout24/toguru/badge.svg?branch=master)](https://coveralls.io/github/AutoScout24/toguru?branch=master)
 [![Docker Pulls](https://img.shields.io/docker/pulls/as24/toguru.svg)](https://hub.docker.com/r/as24/toguru/)
 
 The toggle guru (Japanese for toggle).
@@ -264,8 +264,8 @@ To switch both behaviours off, set `toggleState.initializeOnStartup` to `false`.
 
 ## Related projects
 
-* [AutoScout24/toguru-scala-client](https://github.com/AutoScout24/toguru-scala-client): Scala client for this toggling service
-* [AutoScout24/toguru-panel](https://github.com/AutoScout24/toguru-panel): UI panel for toggle management
+* [Scout24/toguru-scala-client](https://github.com/Scout24/toguru-scala-client): Scala client for this toggling service
+* [Scout24/toguru-panel](https://github.com/Scout24/toguru-panel): UI panel for toggle management
 
 ## License
 
